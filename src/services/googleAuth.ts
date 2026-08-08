@@ -18,10 +18,16 @@ export async function signInWithGoogle() {
   }
 }
 
-// Re-authenticate silently to get a fresh token that includes any newly added scopes (e.g. drive.readonly)
+// Re-authenticate with forced consent so Google issues a fresh token with ALL scopes (including drive.readonly)
 export async function refreshGoogleToken() {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    const driveProvider = new GoogleAuthProvider();
+    driveProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
+    driveProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
+    // 'consent' forces Google to show the full permissions screen and issue a NEW token
+    driveProvider.setCustomParameters({ prompt: 'consent' });
+
+    const result = await signInWithPopup(auth, driveProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     const token = credential?.accessToken;
     if (token) {
