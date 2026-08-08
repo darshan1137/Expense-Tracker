@@ -44,6 +44,41 @@ export class GoogleSheetsService {
     return response.json();
   }
 
+  private async fetchDriveAPI(url: string, options: RequestInit = {}) {
+    this.accessToken = this.accessToken || localStorage.getItem('googleAccessToken');
+    if (!this.accessToken) throw new Error("No access token");
+    
+    const headers = new Headers(options.headers || {});
+    headers.set('Authorization', `Bearer ${this.accessToken}`);
+    headers.set('Content-Type', 'application/json');
+
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files${url}`, {
+      ...options,
+      headers
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Drive API Error');
+    }
+    return response.json();
+  }
+
+  async findExistingSpreadsheet(title: string) {
+    try {
+      // Search for a Google Sheet with the exact title that isn't trashed
+      const query = `name='${title}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`;
+      const data = await this.fetchDriveAPI(`?q=${encodeURIComponent(query)}&fields=files(id, name)`);
+      if (data.files && data.files.length > 0) {
+        return data.files[0].id; // Return the ID of the first match
+      }
+      return null;
+    } catch (e) {
+      console.error("Error finding spreadsheet", e);
+      return null;
+    }
+  }
+
   async verifySpreadsheetAccess(id: string) {
     try {
       const data = await this.fetchAPI(`/${id}`);

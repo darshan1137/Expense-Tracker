@@ -16,22 +16,28 @@ export default function AddExpense() {
     amount: '',
     category: '',
     description: '',
-    notes: ''
+    notes: '',
+    customCategoryName: '',
+    customCategoryType: 'Needs' as 'Needs' | 'Wants' | 'Investments'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.amount || !formData.category || !formData.description) return;
+    if (formData.category === 'Other' && !formData.customCategoryName) return;
     
     setLoading(true);
     try {
-      const type = getCategoryType(formData.category);
+      const isCustom = formData.category === 'Other';
+      const type = isCustom ? formData.customCategoryType : getCategoryType(formData.category);
+      const finalCategory = isCustom ? formData.customCategoryName : formData.category;
+
       const expense = {
         id: generateTransactionId(formData.date),
         date: formData.date,
         description: formData.description,
-        category: formData.category,
-        type: type,
+        category: finalCategory,
+        type: type as any,
         amount: parseFloat(formData.amount),
         notes: formData.notes
       };
@@ -45,7 +51,9 @@ export default function AddExpense() {
         amount: '',
         category: '',
         description: '',
-        notes: ''
+        notes: '',
+        customCategoryName: '',
+        customCategoryType: 'Needs'
       }));
     } catch (error) {
       console.error(error);
@@ -104,9 +112,43 @@ export default function AddExpense() {
                   {cat.name} ({cat.type})
                 </SelectItem>
               ))}
+              <SelectItem value="Other">Other (Custom)</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
+        {formData.category === 'Other' && (
+          <div className="space-y-4 p-4 border border-primary/20 rounded-lg bg-primary/5 animate-in fade-in zoom-in-95">
+            <div className="space-y-2">
+              <Label htmlFor="customCategoryName">Custom Category Name</Label>
+              <Input 
+                id="customCategoryName"
+                placeholder="e.g. Pet Supplies"
+                value={formData.customCategoryName}
+                onChange={e => setFormData({...formData, customCategoryName: e.target.value})}
+                required
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Category Type</Label>
+              <Select 
+                value={formData.customCategoryType}
+                onValueChange={(val: any) => setFormData({...formData, customCategoryType: val})}
+                disabled={loading}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Needs">Needs (Essentials)</SelectItem>
+                  <SelectItem value="Wants">Wants (Lifestyle)</SelectItem>
+                  <SelectItem value="Investments">Investments</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="description">Description</Label>
