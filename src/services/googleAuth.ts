@@ -5,7 +5,6 @@ import { sheetsService } from './googleSheets';
 export async function signInWithGoogle() {
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    // This gives you a Google Access Token. You can use it to access the Google API.
     const credential = GoogleAuthProvider.credentialFromResult(result);
     const token = credential?.accessToken;
     if (token) {
@@ -19,13 +18,32 @@ export async function signInWithGoogle() {
   }
 }
 
+// Re-authenticate silently to get a fresh token that includes any newly added scopes (e.g. drive.readonly)
+export async function refreshGoogleToken() {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const token = credential?.accessToken;
+    if (token) {
+      localStorage.setItem('googleAccessToken', token);
+      sheetsService.setAccessToken(token);
+    }
+    return token;
+  } catch (error) {
+    console.error('Error refreshing token', error);
+    return null;
+  }
+}
+
 export async function signOut() {
   try {
     await firebaseSignOut(auth);
     localStorage.removeItem('googleAccessToken');
+    localStorage.removeItem('spreadsheetId');
     sheetsService.setAccessToken('');
   } catch (error) {
     console.error('Error signing out', error);
     throw error;
   }
 }
+
