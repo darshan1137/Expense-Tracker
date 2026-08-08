@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { db } from '../db/indexedDB';
@@ -8,12 +9,51 @@ import { Expense } from '../types/expense';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [timedOut, setTimedOut] = useState(false);
   const { startDate, endDate } = useDateFilter();
   
   const expenses = useLiveQuery(() => db.expenses.toArray());
   const loading = expenses === undefined;
 
-  if (loading) return <div className="p-4 md:p-8">Loading dashboard...</div>;
+  // If still loading after 5 seconds, something is wrong — show recovery UI
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setTimeout(() => setTimedOut(true), 5000);
+    return () => clearTimeout(timer);
+  }, [loading]);
+
+  if (loading) {
+    if (timedOut) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center space-y-4">
+          <div className="text-4xl">⚠️</div>
+          <h2 className="text-xl font-bold">Taking too long…</h2>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            The local database may be blocked by another tab or browser storage issue.
+          </p>
+          <div className="space-y-2 w-full max-w-xs">
+            <Button className="w-full" onClick={() => window.location.reload()}>Reload Page</Button>
+            <Button variant="outline" className="w-full" onClick={async () => {
+              // Clear and recreate the DB
+              await db.delete();
+              window.location.reload();
+            }}>
+              Clear Local Data &amp; Reload
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Clearing local data won't delete anything from Google Sheets.
+          </p>
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center space-y-3">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+        <p className="text-sm text-muted-foreground">Loading dashboard…</p>
+      </div>
+    );
+  }
 
   // Filter by selected date range
   const filteredExpenses = expenses.filter(e => {
