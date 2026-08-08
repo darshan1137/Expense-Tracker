@@ -23,7 +23,7 @@ export async function refreshGoogleToken() {
   try {
     const driveProvider = new GoogleAuthProvider();
     driveProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
-    driveProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
+    driveProvider.addScope('https://www.googleapis.com/auth/drive.file');
     // 'consent' forces Google to show the full permissions screen and issue a NEW token
     driveProvider.setCustomParameters({ prompt: 'consent' });
 
