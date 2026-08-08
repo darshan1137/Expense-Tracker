@@ -50,7 +50,6 @@ export class GoogleSheetsService {
     
     const headers = new Headers(options.headers || {});
     headers.set('Authorization', `Bearer ${this.accessToken}`);
-    headers.set('Content-Type', 'application/json');
 
     const response = await fetch(`https://www.googleapis.com/drive/v3/files${url}`, {
       ...options,
@@ -64,20 +63,62 @@ export class GoogleSheetsService {
     return response.json();
   }
 
-  async findExistingSpreadsheet(title: string) {
+  // Read the saved spreadsheet ID from the hidden app data folder
+  async getAppConfig(): Promise<{ spreadsheetId: string } | null> {
     try {
-      // Search for a Google Sheet with the exact title that isn't trashed
-      const query = `name='${title}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`;
-      const data = await this.fetchDriveAPI(`?q=${encodeURIComponent(query)}&fields=files(id, name)`);
-      console.log('[Drive Search] query:', query);
-      console.log('[Drive Search] response:', JSON.stringify(data));
-      if (data.files && data.files.length > 0) {
-        return data.files[0].id; // Return the ID of the first match
-      }
-      return null;
+      // List files in the hidden appDataFolder
+      const list = await this.fetchDriveAPI('?spaces=appDataFolder&q=name=%27expense-tracker-config.json%27&fields=files(id)');
+      if (!list.files || list.files.length === 0) return null;
+
+      const fileId = list.files[0].id;
+      // Download the file content
+      this.accessToken = this.accessToken || localStorage.getItem('googleAccessToken');
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        headers: { Authorization: `Bearer ${this.accessToken}` }
+      });
+      if (!res.ok) return null;
+      return await res.json();
     } catch (e) {
-      console.error("Error finding spreadsheet", e);
+      console.error('Error reading app config from Drive', e);
       return null;
+    }
+  }
+
+  // Save the spreadsheet ID to the hidden app data folder (creates or replaces)
+  async saveAppConfig(data: { spreadsheetId: string }) {
+    try {
+      this.accessToken = this.accessToken || localStorage.getItem('googleAccessToken');
+      const content = JSON.stringify(data);
+
+      // Check if the file already exists
+      const list = await this.fetchDriveAPI('?spaces=appDataFolder&q=name=%27expense-tracker-config.json%27&fields=files(id)');
+      
+      if (list.files && list.files.length > 0) {
+        // Update existing file
+        const fileId = list.files[0].id;
+        await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: content
+        });
+      } else {
+        // Create new file in appDataFolder
+        const metadata = { name: 'expense-tracker-config.json', parents: ['appDataFolder'] };
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', new Blob([content], { type: 'application/json' }));
+
+        await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${this.accessToken}` },
+          body: form
+        });
+      }
+    } catch (e) {
+      console.error('Error saving app config to Drive', e);
     }
   }
 

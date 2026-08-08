@@ -23,8 +23,7 @@ export async function refreshGoogleToken() {
   try {
     const driveProvider = new GoogleAuthProvider();
     driveProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
-    driveProvider.addScope('https://www.googleapis.com/auth/drive.file');
-    // 'consent' forces Google to show the full permissions screen and issue a NEW token
+    driveProvider.addScope('https://www.googleapis.com/auth/drive.appdata');
     driveProvider.setCustomParameters({ prompt: 'consent' });
 
     const result = await signInWithPopup(auth, driveProvider);

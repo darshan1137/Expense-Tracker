@@ -16,5 +16,5 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 // We add scopes for Google Sheets and Drive API to the provider
 googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
-// drive.file = only files created by this app (far safer than drive.readonly)
-googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
+// drive.appdata = access ONLY this app's hidden folder in Drive (most restrictive possible)
+googleProvider.addScope('https://www.googleapis.com/auth/drive.appdata');

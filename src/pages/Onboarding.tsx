@@ -1,21 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { sheetsService } from '../services/googleSheets';
-import { signOut } from '../services/googleAuth';
+import { refreshGoogleToken, signOut } from '../services/googleAuth';
+
+type Step = 'scanning' | 'choose' | 'creating';
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const [step, setStep] = useState<Step>('scanning');
   const [manualUrl, setManualUrl] = useState('');
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'choose' | 'creating'>('choose');
+
+  useEffect(() => {
+    const autoDetect = async () => {
+      try {
+        // Get a fresh token with drive.appdata scope
+        await refreshGoogleToken();
+
+        // Check the hidden app data folder for a previously saved config
+        const config = await sheetsService.getAppConfig();
+        if (config?.spreadsheetId) {
+          // Verify it's still accessible
+          const valid = await sheetsService.verifySpreadsheetAccess(config.spreadsheetId);
+          if (valid) {
+            localStorage.setItem('spreadsheetId', config.spreadsheetId);
+            sheetsService.setSpreadsheetId(config.spreadsheetId);
+            navigate('/');
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Auto-detect failed', e);
+      }
+      // Fall through: show the manual options
+      setStep('choose');
+    };
+    autoDetect();
+  }, [navigate]);
 
   const handleCreateNew = async () => {
     setStep('creating');
     try {
       const id = await sheetsService.createNewSpreadsheet("My Expense Tracker");
       localStorage.setItem('spreadsheetId', id);
+      // Save to hidden app folder for future auto-detection
+      await sheetsService.saveAppConfig({ spreadsheetId: id });
       navigate('/');
     } catch (e: any) {
       alert('Failed to create spreadsheet: ' + (e?.message || 'Unknown error'));
@@ -38,6 +69,8 @@ export default function Onboarding() {
       if (data) {
         localStorage.setItem('spreadsheetId', id);
         sheetsService.setSpreadsheetId(id);
+        // Save to hidden app folder so it auto-detects next time
+        await sheetsService.saveAppConfig({ spreadsheetId: id });
         navigate('/');
       } else {
         alert('Could not access that spreadsheet. Make sure you are the owner and have edit access.');
@@ -56,21 +89,35 @@ export default function Onboarding() {
         <div className="text-center space-y-2">
           <img src="/logo.png" alt="Logo" className="w-14 h-14 object-contain mx-auto drop-shadow-lg" />
           <h2 className="text-xl font-bold">Setup Your Tracker</h2>
-          <p className="text-sm text-muted-foreground">Connect an existing spreadsheet or start fresh.</p>
         </div>
 
-        {step === 'creating' ? (
+        {/* Scanning */}
+        {step === 'scanning' && (
+          <div className="text-center space-y-4 py-4">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto" />
+            <p className="text-sm text-muted-foreground">Checking for your existing tracker…</p>
+          </div>
+        )}
+
+        {/* Creating */}
+        {step === 'creating' && (
           <div className="text-center space-y-4 py-4">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto" />
             <p className="text-sm text-muted-foreground">Creating your Google Sheet…</p>
           </div>
-        ) : (
+        )}
+
+        {/* Manual choose */}
+        {step === 'choose' && (
           <>
-            {/* Connect existing */}
+            <p className="text-sm text-muted-foreground text-center">
+              No existing tracker was found. Connect one or start fresh.
+            </p>
+
             <div className="space-y-3">
               <label className="text-sm font-semibold text-foreground">Connect Existing Spreadsheet</label>
               <p className="text-xs text-muted-foreground">
-                Open your <span className="font-medium">"My Expense Tracker"</span> sheet in Google Drive, copy the URL from the address bar, and paste it below.
+                Open your spreadsheet in Google Drive, copy the URL and paste it below.
               </p>
               <Input
                 placeholder="https://docs.google.com/spreadsheets/d/..."
@@ -86,7 +133,6 @@ export default function Onboarding() {
               </Button>
             </div>
 
-            {/* Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-border" />
@@ -96,7 +142,6 @@ export default function Onboarding() {
               </div>
             </div>
 
-            {/* Create new */}
             <Button variant="outline" onClick={handleCreateNew} className="w-full">
               Create a New Tracker
             </Button>
