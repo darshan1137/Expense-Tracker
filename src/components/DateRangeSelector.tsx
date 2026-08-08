@@ -40,7 +40,10 @@ export default function DateRangeSelector() {
       return `${year}-${month}-${day}`;
     };
 
-    if (type === 'this_month') {
+    if (type === 'today') {
+      const today = format(now);
+      setDates(today, today);
+    } else if (type === 'this_month') {
       const first = new Date(now.getFullYear(), now.getMonth(), 1);
       const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       setDates(format(first), format(last));
@@ -49,7 +52,6 @@ export default function DateRangeSelector() {
       const last = new Date(now.getFullYear(), now.getMonth(), 0);
       setDates(format(first), format(last));
     } else if (type === 'all_time') {
-      // Start from August 2026 as per requirements
       setDates('2026-08-01', format(now));
     }
     setIsOpen(false);
@@ -71,7 +73,13 @@ export default function DateRangeSelector() {
         <div className="absolute top-full mt-2 left-0 z-50 w-72 bg-card border border-border shadow-2xl rounded-xl p-4 animate-in fade-in zoom-in-95 origin-top-left">
           
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                onClick={() => handlePreset('today')}
+                className="py-1.5 px-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+              >
+                Today
+              </button>
               <button
                 onClick={() => handlePreset('this_month')}
                 className="py-1.5 px-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
