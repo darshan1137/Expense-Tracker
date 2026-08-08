@@ -229,11 +229,11 @@ export default function Dashboard() {
       {sheetMode !== 'none' && (
         <>
           <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-in fade-in"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[55] animate-in fade-in"
             onClick={() => { setSheetMode('none'); setSelectedExpense(null); setEditForm({}); }}
           />
 
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-2xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto">
+          <div className="fixed bottom-24 md:bottom-0 left-0 right-0 z-[60] bg-card rounded-t-2xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300 max-h-[calc(90vh-6rem)] md:max-h-[90vh] overflow-y-auto">
 
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border/50">
               <div>

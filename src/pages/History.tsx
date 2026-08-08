@@ -24,7 +24,8 @@ export default function History() {
   const [editForm, setEditForm] = useState<Partial<Expense>>({});
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [groupBy, setGroupBy] = useState<'none' | 'type' | 'category'>('none');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const sortedExpenses = expenses
     ? [...expenses]
@@ -107,29 +108,99 @@ export default function History() {
     return acc;
   }, {} as Record<string, Expense[]>);
 
+  const availableCategories = Array.from(new Set(sortedExpenses.map(expense => expense.category).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+
+  const filteredExpenses = sortedExpenses.filter(expense => {
+    const matchesType = selectedTypes.length === 0 || selectedTypes.includes(expense.type);
+    const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(expense.category);
+    return matchesType && matchesCategory;
+  });
+
+  const filteredGroupedByDate = filteredExpenses.reduce((acc, expense) => {
+    const dateStr = new Date(expense.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    if (!acc[dateStr]) acc[dateStr] = [];
+    acc[dateStr].push(expense);
+    return acc;
+  }, {} as Record<string, Expense[]>);
+
+  const toggleFilter = (value: string, current: string[], setter: (next: string[]) => void) => {
+    setter(current.includes(value) ? current.filter(item => item !== value) : [...current, value]);
+  };
+
+  const clearFilters = () => {
+    setSelectedTypes([]);
+    setSelectedCategories([]);
+  };
+
   const typeColor = (type: string) => {
     if (type === 'Needs') return 'text-blue-500';
     if (type === 'Wants') return 'text-amber-500';
     return 'text-emerald-500';
   };
 
+  const hasActiveFilters = selectedTypes.length > 0 || selectedCategories.length > 0;
+
   return (
     <div className="p-4 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">History</h2>
-        <div className="flex items-center gap-3">
-          <Select value={groupBy} onValueChange={(val: any) => setGroupBy(val)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Group by Date</SelectItem>
-              <SelectItem value="type">Group by Type (Needs/Wants/Invest)</SelectItem>
-              <SelectItem value="category">Group by Category</SelectItem>
-            </SelectContent>
-          </Select>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-border/50 bg-card/70 p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Filters</p>
+            <p className="text-xs text-muted-foreground">Combine type and category filters together</p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={clearFilters} disabled={!hasActiveFilters} className="rounded-full">
+            Clear all
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
+          <div className="flex flex-wrap gap-2">
+            {['Needs', 'Wants', 'Investments'].map(type => {
+              const active = selectedTypes.includes(type);
+              return (
+                <Button
+                  key={type}
+                  type="button"
+                  size="sm"
+                  variant={active ? 'default' : 'outline'}
+                  className="rounded-full"
+                  onClick={() => toggleFilter(type, selectedTypes, setSelectedTypes)}
+                >
+                  {type}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category</p>
+          <div className="flex flex-wrap gap-2">
+            {availableCategories.map(category => {
+              const active = selectedCategories.includes(category);
+              return (
+                <Button
+                  key={category}
+                  type="button"
+                  size="sm"
+                  variant={active ? 'default' : 'outline'}
+                  className="rounded-full"
+                  onClick={() => toggleFilter(category, selectedCategories, setSelectedCategories)}
+                >
+                  {category}
+                </Button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {groupBy === 'none' && Object.entries(grouped).map(([date, dayExpenses], index) => {
+      {Object.entries(filteredGroupedByDate).map(([date, dayExpenses], index) => {
         return (
           <div key={date} className="space-y-3 animate-in fade-in slide-in-from-bottom-4" style={{ animationFillMode: 'both', animationDelay: `${index * 120}ms` }}>
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 pb-1 border-b border-border/40">
@@ -169,90 +240,19 @@ export default function History() {
         );
       })}
 
-      {groupBy === 'type' && Object.entries(groupedByType).map(([type, items]) => (
-        <div key={type} className="space-y-3">
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 pb-1 border-b border-border/40">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
-            {type}
-          </h3>
-          {items.map((expense, i) => (
-            <Card
-              key={expense.id}
-              className="glass border-none shadow-sm transition-all duration-200 hover:scale-[1.01] hover:shadow-md cursor-pointer animate-in fade-in slide-in-from-right-4"
-              style={{ animationFillMode: 'both', animationDelay: `${i * 80}ms` }}
-              onClick={() => openActions(expense)}
-            >
-              <CardContent className="p-4 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-2.5 rounded-2xl">
-                    <span className="text-xl">📄</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-foreground/90">{expense.description}</p>
-                    <p className="text-xs text-muted-foreground flex gap-1.5 items-center mt-0.5">
-                      <span className="bg-background/50 px-1.5 py-0.5 rounded-md">{expense.category}</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold">{formatCurrency(expense.amount)}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{expense.date}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ))}
-
-      {groupBy === 'category' && Object.entries(groupedByCategory).map(([cat, items]) => (
-        <div key={cat} className="space-y-3">
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 pb-1 border-b border-border/40">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />
-            {cat}
-          </h3>
-          {items.map((expense, i) => (
-            <Card
-              key={expense.id}
-              className="glass border-none shadow-sm transition-all duration-200 hover:scale-[1.01] hover:shadow-md cursor-pointer animate-in fade-in slide-in-from-right-4"
-              style={{ animationFillMode: 'both', animationDelay: `${i * 80}ms` }}
-              onClick={() => openActions(expense)}
-            >
-              <CardContent className="p-4 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-2.5 rounded-2xl">
-                    <span className="text-xl">📄</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-foreground/90">{expense.description}</p>
-                    <p className="text-xs text-muted-foreground flex gap-1.5 items-center mt-0.5">
-                      <span className="bg-background/50 px-1.5 py-0.5 rounded-md">{expense.type}</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold">{formatCurrency(expense.amount)}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{expense.date}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ))}
-
-      {sortedExpenses.length === 0 && (
-        <p className="text-center text-muted-foreground py-12">No expenses in the selected date range.</p>
+      {filteredExpenses.length === 0 && (
+        <p className="text-center text-muted-foreground py-12">
+          {hasActiveFilters ? 'No expenses match the selected filters.' : 'No expenses in the selected date range.'}
+        </p>
       )}
 
       {/* ── Bottom Sheet ── */}
       {sheetMode !== 'none' && (
         <>
           {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-in fade-in"
-            onClick={closeSheet}
-          />
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[55] animate-in fade-in" onClick={closeSheet} />
 
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-2xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto">
+          <div className="fixed bottom-24 md:bottom-0 left-0 right-0 z-[60] bg-card rounded-t-2xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300 max-h-[calc(90vh-6rem)] md:max-h-[90vh] overflow-y-auto">
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border/50">
