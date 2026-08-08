@@ -26,25 +26,36 @@ export default function History() {
     <div className="p-4 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <h2 className="text-2xl font-bold mb-6">History</h2>
 
-      {Object.entries(grouped).map(([date, dayExpenses]) => (
-        <div key={date} className="space-y-4">
-          <h3 className="text-sm font-bold text-muted-foreground border-b border-border pb-2">{date}</h3>
+      {Object.entries(grouped).map(([date, dayExpenses], index) => (
+        <div key={date} className="space-y-4 animate-in fade-in slide-in-from-bottom-4" style={{ animationFillMode: 'both', animationDelay: `${index * 150}ms` }}>
+          <h3 className="text-sm font-bold text-muted-foreground border-b border-border/50 pb-2 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+            {date}
+          </h3>
           
           <div className="space-y-3">
-            {dayExpenses.map(expense => (
-              <Card key={expense.id} className="bg-card border-none shadow-sm">
+            {dayExpenses.map((expense, i) => (
+              <Card 
+                key={expense.id} 
+                className="glass border-none shadow-sm transition-all duration-300 hover:scale-[1.01] hover:-translate-x-1 hover:shadow-md cursor-pointer animate-in fade-in slide-in-from-right-4"
+                style={{ animationFillMode: 'both', animationDelay: `${(index * 150) + (i * 100)}ms` }}
+              >
                 <CardContent className="p-4 flex justify-between items-center">
                   <div className="flex items-center space-x-4">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <span className="text-xl">📄</span>
+                    <div className="bg-primary/10 p-2.5 rounded-2xl transition-colors hover:bg-primary/20">
+                      <span className="text-xl drop-shadow-sm">📄</span>
                     </div>
                     <div>
-                      <p className="font-semibold">{expense.description}</p>
-                      <p className="text-xs text-muted-foreground">{expense.category} • {expense.type}</p>
+                      <p className="font-semibold text-foreground/90">{expense.description}</p>
+                      <p className="text-xs text-muted-foreground flex gap-2 items-center mt-0.5">
+                        <span className="bg-background/50 px-1.5 py-0.5 rounded-md">{expense.category}</span>
+                        <span>•</span>
+                        <span className="opacity-80">{expense.type}</span>
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">{formatCurrency(expense.amount)}</p>
+                    <p className="font-bold text-lg">{formatCurrency(expense.amount)}</p>
                   </div>
                 </CardContent>
               </Card>

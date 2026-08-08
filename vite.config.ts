@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'Expense Tracker - Coding Gurus',
         short_name: 'ExpenseTracker',
         description: 'Track your expenses simply and effortlessly.',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        theme_color: '#5a189a',
+        background_color: '#0A0A0B',
         display: 'standalone',
         icons: [
           {
