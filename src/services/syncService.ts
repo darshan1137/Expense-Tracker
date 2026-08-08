@@ -4,20 +4,21 @@ import { Expense } from '../types/expense';
 
 export class SyncService {
   async addExpense(expense: Expense) {
-    // 1. Save locally
     await db.expenses.put(expense);
-    
-    // 2. Queue for sync
-    await db.syncQueue.put({
-      id: expense.id,
-      action: 'ADD',
-      payload: expense
-    });
+    await db.syncQueue.put({ id: expense.id, action: 'ADD', payload: expense });
+    if (navigator.onLine) await this.processQueue();
+  }
 
-    // 3. Attempt sync if online
-    if (navigator.onLine) {
-      await this.processQueue();
-    }
+  async updateExpense(expense: Expense) {
+    await db.expenses.put(expense);
+    await db.syncQueue.put({ id: `update-${expense.id}`, action: 'UPDATE', payload: expense });
+    if (navigator.onLine) await this.processQueue();
+  }
+
+  async deleteExpense(id: string) {
+    await db.expenses.delete(id);
+    await db.syncQueue.put({ id: `delete-${id}`, action: 'DELETE', payload: { id } });
+    if (navigator.onLine) await this.processQueue();
   }
 
   async processQueue() {
@@ -26,19 +27,32 @@ export class SyncService {
     const queue = await db.syncQueue.toArray();
     if (queue.length === 0) return;
 
-    const addItems = queue.filter(item => item.action === 'ADD');
-    
+    const addItems    = queue.filter(item => item.action === 'ADD');
+    const updateItems = queue.filter(item => item.action === 'UPDATE');
+    const deleteItems = queue.filter(item => item.action === 'DELETE');
+
+    // Process ADDs
     if (addItems.length > 0) {
       try {
-        const expensesToAdd = addItems.map(item => item.payload);
-        await sheetsService.batchAddExpenses(expensesToAdd);
-        
-        // Remove processed items from queue
-        const itemIds = addItems.map(item => item.id);
-        await db.syncQueue.bulkDelete(itemIds);
-      } catch (error) {
-        console.error('Failed to batch sync items', error);
-      }
+        await sheetsService.batchAddExpenses(addItems.map(i => i.payload));
+        await db.syncQueue.bulkDelete(addItems.map(i => i.id));
+      } catch (e) { console.error('Failed to sync ADDs', e); }
+    }
+
+    // Process UPDATEs
+    for (const item of updateItems) {
+      try {
+        await sheetsService.updateExpense(item.payload);
+        await db.syncQueue.delete(item.id);
+      } catch (e) { console.error('Failed to sync UPDATE', e); }
+    }
+
+    // Process DELETEs
+    for (const item of deleteItems) {
+      try {
+        await sheetsService.deleteExpense(item.payload.id);
+        await db.syncQueue.delete(item.id);
+      } catch (e) { console.error('Failed to sync DELETE', e); }
     }
   }
 
@@ -46,10 +60,13 @@ export class SyncService {
     if (!navigator.onLine) return;
     try {
       const expenses = await sheetsService.getExpenses();
-      // Clear and bulk add
       await db.expenses.clear();
       await db.expenses.bulkPut(expenses);
     } catch (error) {
+      const msg = (error as any)?.message || '';
+      if (msg.includes('invalid authentication credentials') || msg.includes('401')) {
+        throw error; // Let App.tsx handle logout
+      }
       console.error('Failed to fetch initial data', error);
     }
   }
@@ -57,7 +74,5 @@ export class SyncService {
 
 export const syncService = new SyncService();
 
-// Listen for online events to trigger sync
-window.addEventListener('online', () => {
-  syncService.processQueue();
-});
+window.addEventListener('online', () => { syncService.processQueue(); });
+

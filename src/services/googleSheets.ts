@@ -206,10 +206,63 @@ export class GoogleSheetsService {
       description: row[2],
       category: row[3],
       type: row[4],
-      amount: parseFloat(row[5].replace(/[^0-9.-]+/g,"")), // handle currency format if any
+      amount: parseFloat(String(row[5]).replace(/[^0-9.-]+/g, "")),
       notes: row[6]
     }));
+  }
+
+  // Find which row a given expense ID is in (1-indexed, accounting for header row)
+  private async findRowIndexById(id: string): Promise<number | null> {
+    const data = await this.fetchAPI(`/${this.spreadsheetId}/values/Transactions!A:A`);
+    const rows: string[][] = data.values || [];
+    const rowIndex = rows.findIndex(r => r[0] === id);
+    return rowIndex === -1 ? null : rowIndex + 1; // 1-indexed in Sheets API
+  }
+
+  async updateExpense(expense: Expense) {
+    if (!this.spreadsheetId) throw new Error("No spreadsheet connected");
+    const rowIndex = await this.findRowIndexById(expense.id);
+    if (rowIndex === null) {
+      // If not found in sheet, just add it
+      await this.batchAddExpenses([expense]);
+      return;
+    }
+    const range = `Transactions!A${rowIndex}:G${rowIndex}`;
+    await this.fetchAPI(`/${this.spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        values: [[
+          expense.id, expense.date, expense.description,
+          expense.category, expense.type, expense.amount, expense.notes || ''
+        ]]
+      })
+    });
+  }
+
+  async deleteExpense(id: string) {
+    if (!this.spreadsheetId) throw new Error("No spreadsheet connected");
+    const rowIndex = await this.findRowIndexById(id);
+    if (rowIndex === null) return; // Already gone
+    // Get sheet metadata to find sheetId
+    const meta = await this.fetchAPI(`/${this.spreadsheetId}?fields=sheets.properties`);
+    const sheetId = meta.sheets[0].properties.sheetId;
+    await this.fetchAPI(`/${this.spreadsheetId}:batchUpdate`, {
+      method: 'POST',
+      body: JSON.stringify({
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension: 'ROWS',
+              startIndex: rowIndex - 1, // 0-indexed
+              endIndex: rowIndex
+            }
+          }
+        }]
+      })
+    });
   }
 }
 
 export const sheetsService = new GoogleSheetsService();
+

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { useState } from 'react';
 import { db } from '../db/indexedDB';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDateFilter } from '../components/DateFilterProvider';
@@ -9,6 +10,8 @@ export default function Analysis() {
   const expenses = useLiveQuery(() => db.expenses.toArray());
   const loading = expenses === undefined;
   const { startDate, endDate } = useDateFilter();
+
+  const [pieActiveIndex, setPieActiveIndex] = useState<number | null>(null);
 
   if (loading) return <div className="p-4 md:p-8">Loading analysis...</div>;
 
@@ -42,11 +45,11 @@ export default function Analysis() {
 
   if (loading) return <div className="p-4">Loading analysis...</div>;
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="glass px-4 py-3 rounded-xl border border-border shadow-xl">
-          <p className="font-bold text-foreground mb-1">{payload[0].payload.name}</p>
+        <div className="glass px-4 py-3 rounded-xl border border-border shadow-xl transition-opacity duration-150" style={{ pointerEvents: 'none' }}>
+          <p className="font-bold text-foreground mb-1">{payload[0].payload.name || label}</p>
           <p className="text-primary font-semibold text-lg">{formatCurrency(payload[0].value)}</p>
           <p className="text-xs text-muted-foreground mt-1">
             {Math.round((payload[0].value / totalSpent) * 100)}% of total spend
@@ -81,12 +84,21 @@ export default function Analysis() {
                     isAnimationActive={true}
                     animationDuration={1000}
                     animationEasing="ease-out"
+                    onMouseEnter={(_, index) => setPieActiveIndex(index)}
+                    onMouseLeave={() => setPieActiveIndex(null)}
                   >
                     {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} className="transition-all duration-300 hover:opacity-80 cursor-pointer" />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color}
+                        className="transition-all duration-300 cursor-pointer"
+                        // slightly enlarge hovered slice by increasing radius via style (visual effect)
+                        stroke={pieActiveIndex === index ? 'rgba(0,0,0,0.06)' : 'transparent'}
+                        strokeWidth={pieActiveIndex === index ? 8 : 0}
+                      />
                     ))}
                   </Pie>
-                  <Tooltip content={<CustomTooltip />} />
+                  <Tooltip content={<CustomTooltip />} wrapperStyle={{ pointerEvents: 'none' }} animationDuration={120} />
                 </PieChart>
               </ResponsiveContainer>
               {/* Inner Label for Donut Chart */}
@@ -123,7 +135,7 @@ export default function Analysis() {
                     </defs>
                     <XAxis type="number" hide />
                     <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} fontSize={12} tick={{fill: 'currentColor', opacity: 0.8}} />
-                    <Tooltip cursor={{fill: 'hsl(var(--secondary))', opacity: 0.5}} content={<CustomTooltip />} />
+                    <Tooltip cursor={{ fill: 'transparent' }} content={<CustomTooltip />} wrapperStyle={{ pointerEvents: 'none' }} animationDuration={120} />
                     <Bar dataKey="value" fill="url(#colorValue)" radius={[0, 8, 8, 0]} isAnimationActive={true} animationDuration={1000} />
                   </BarChart>
                 </ResponsiveContainer>
