@@ -69,6 +69,8 @@ export class GoogleSheetsService {
       // Search for a Google Sheet with the exact title that isn't trashed
       const query = `name='${title}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`;
       const data = await this.fetchDriveAPI(`?q=${encodeURIComponent(query)}&fields=files(id, name)`);
+      console.log('[Drive Search] query:', query);
+      console.log('[Drive Search] response:', JSON.stringify(data));
       if (data.files && data.files.length > 0) {
         return data.files[0].id; // Return the ID of the first match
       }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { sheetsService } from '../services/googleSheets';
 import { refreshGoogleToken, signOut } from '../services/googleAuth';
 
@@ -10,15 +11,15 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('refreshing');
   const [errorMsg, setErrorMsg] = useState('');
+  const [manualUrl, setManualUrl] = useState('');
+  const [manualLoading, setManualLoading] = useState(false);
 
   useEffect(() => {
     const autoSetup = async () => {
       try {
-        // Step 1: Refresh token so we have the drive.readonly scope
         setStep('refreshing');
         await refreshGoogleToken();
 
-        // Step 2: Scan Drive for an existing tracker
         setStep('scanning');
         const existingId = await sheetsService.findExistingSpreadsheet("My Expense Tracker");
 
@@ -26,9 +27,8 @@ export default function Onboarding() {
           setStep('found');
           localStorage.setItem('spreadsheetId', existingId);
           sheetsService.setSpreadsheetId(existingId);
-          setTimeout(() => navigate('/'), 1000); // brief "found" feedback
+          setTimeout(() => navigate('/'), 1000);
         } else {
-          // Let user decide: create new or we couldn't find it
           setStep('not_found');
         }
       } catch (e: any) {
@@ -37,7 +37,6 @@ export default function Onboarding() {
         setStep('error');
       }
     };
-
     autoSetup();
   }, [navigate]);
 
@@ -53,6 +52,32 @@ export default function Onboarding() {
     }
   };
 
+  const handleManualConnect = async () => {
+    if (!manualUrl.trim()) return;
+    setManualLoading(true);
+    try {
+      const match = manualUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match) {
+        alert('Invalid Google Sheets URL. Please paste the full URL from your browser.');
+        setManualLoading(false);
+        return;
+      }
+      const id = match[1];
+      const data = await sheetsService.verifySpreadsheetAccess(id);
+      if (data) {
+        localStorage.setItem('spreadsheetId', id);
+        sheetsService.setSpreadsheetId(id);
+        navigate('/');
+      } else {
+        alert('Could not access that spreadsheet. Make sure you have edit access.');
+      }
+    } catch (e) {
+      alert('Failed to connect. Please check the URL and try again.');
+    } finally {
+      setManualLoading(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut();
   };
@@ -63,7 +88,7 @@ export default function Onboarding() {
 
         <img src="/logo.png" alt="Logo" className="w-16 h-16 object-contain mx-auto drop-shadow-lg" />
 
-        {/* ── Refreshing token ── */}
+        {/* Refreshing */}
         {step === 'refreshing' && (
           <>
             <h2 className="text-xl font-bold">Connecting to Google…</h2>
@@ -72,7 +97,7 @@ export default function Onboarding() {
           </>
         )}
 
-        {/* ── Scanning Drive ── */}
+        {/* Scanning */}
         {step === 'scanning' && (
           <>
             <h2 className="text-xl font-bold">Scanning Google Drive…</h2>
@@ -81,7 +106,7 @@ export default function Onboarding() {
           </>
         )}
 
-        {/* ── Found! ── */}
+        {/* Found */}
         {step === 'found' && (
           <>
             <div className="text-5xl">✅</div>
@@ -90,29 +115,54 @@ export default function Onboarding() {
           </>
         )}
 
-        {/* ── Not found ── */}
+        {/* Not found — show manual fallback */}
         {step === 'not_found' && (
           <>
-            <h2 className="text-xl font-bold">No Existing Tracker Found</h2>
+            <h2 className="text-xl font-bold">Couldn't Detect Automatically</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              We couldn't find a spreadsheet named <span className="font-semibold text-foreground">"My Expense Tracker"</span> in your Google Drive.
+              We didn't find <span className="font-semibold text-foreground">"My Expense Tracker"</span> in your Drive. This may happen if the Google Drive API is not enabled for this project, or if the sheet has a slightly different name.
             </p>
-            <p className="text-xs text-muted-foreground">If you renamed it or it's in a different account, try signing in with that account.</p>
-            <div className="space-y-3 pt-2">
-              <Button onClick={handleCreateNew} className="w-full">
-                Create New Tracker
-              </Button>
-              <button
-                onClick={handleSignOut}
-                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 w-full"
+
+            {/* Manual URL paste */}
+            <div className="space-y-2 text-left">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Paste your spreadsheet URL</p>
+              <Input
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                value={manualUrl}
+                onChange={e => setManualUrl(e.target.value)}
+              />
+              <Button
+                onClick={handleManualConnect}
+                disabled={manualLoading || !manualUrl.trim()}
+                className="w-full"
               >
-                Sign out & use a different account
-              </button>
+                {manualLoading ? 'Connecting…' : 'Connect This Spreadsheet'}
+              </Button>
             </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-card px-2 text-muted-foreground">or</span>
+              </div>
+            </div>
+
+            <Button variant="outline" onClick={handleCreateNew} className="w-full">
+              Create a Brand New Tracker
+            </Button>
+
+            <button
+              onClick={handleSignOut}
+              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"
+            >
+              Sign out & try a different account
+            </button>
           </>
         )}
 
-        {/* ── Creating ── */}
+        {/* Creating */}
         {step === 'creating' && (
           <>
             <h2 className="text-xl font-bold">Creating Your Tracker…</h2>
@@ -121,16 +171,14 @@ export default function Onboarding() {
           </>
         )}
 
-        {/* ── Error ── */}
+        {/* Error */}
         {step === 'error' && (
           <>
             <div className="text-4xl">⚠️</div>
             <h2 className="text-xl font-bold">Something Went Wrong</h2>
             <p className="text-xs text-destructive bg-destructive/10 rounded-lg p-3">{errorMsg}</p>
             <div className="space-y-3">
-              <Button onClick={() => window.location.reload()} className="w-full">
-                Retry
-              </Button>
+              <Button onClick={() => window.location.reload()} className="w-full">Retry</Button>
               <button
                 onClick={handleSignOut}
                 className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 w-full"
