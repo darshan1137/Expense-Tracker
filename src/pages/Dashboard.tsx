@@ -261,6 +261,8 @@ export default function Dashboard() {
                 <button
                   onClick={async () => {
                     if (!selectedExpense) return;
+                    const confirmed = window.confirm(`Delete "${selectedExpense.description}"? This cannot be undone.`);
+                    if (!confirmed) return;
                     setDeletingId(selectedExpense.id);
                     try {
                       await syncService.deleteExpense(selectedExpense.id);

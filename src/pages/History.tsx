@@ -3,7 +3,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { db } from '../db/indexedDB';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDateFilter } from '../components/DateFilterProvider';
@@ -26,6 +25,7 @@ export default function History() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [filtersVisible, setFiltersVisible] = useState(true);
 
   const sortedExpenses = expenses
     ? [...expenses]
@@ -54,6 +54,8 @@ export default function History() {
 
   const handleDelete = async () => {
     if (!selectedExpense) return;
+    const confirmed = window.confirm(`Delete "${selectedExpense.description}"? This cannot be undone.`);
+    if (!confirmed) return;
     setDeletingId(selectedExpense.id);
     try {
       await syncService.deleteExpense(selectedExpense.id);
@@ -152,52 +154,61 @@ export default function History() {
             <p className="text-sm font-semibold">Filters</p>
             <p className="text-xs text-muted-foreground">Combine type and category filters together</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={clearFilters} disabled={!hasActiveFilters} className="rounded-full">
-            Clear all
-          </Button>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
-          <div className="flex flex-wrap gap-2">
-            {['Needs', 'Wants', 'Investments'].map(type => {
-              const active = selectedTypes.includes(type);
-              return (
-                <Button
-                  key={type}
-                  type="button"
-                  size="sm"
-                  variant={active ? 'default' : 'outline'}
-                  className="rounded-full"
-                  onClick={() => toggleFilter(type, selectedTypes, setSelectedTypes)}
-                >
-                  {type}
-                </Button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setFiltersVisible(v => !v)} className="rounded-full">
+              {filtersVisible ? 'Hide' : 'View'}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={clearFilters} disabled={!hasActiveFilters} className="rounded-full">
+              Clear all
+            </Button>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category</p>
-          <div className="flex flex-wrap gap-2">
-            {availableCategories.map(category => {
-              const active = selectedCategories.includes(category);
-              return (
-                <Button
-                  key={category}
-                  type="button"
-                  size="sm"
-                  variant={active ? 'default' : 'outline'}
-                  className="rounded-full"
-                  onClick={() => toggleFilter(category, selectedCategories, setSelectedCategories)}
-                >
-                  {category}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
+        {filtersVisible && (
+          <>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
+              <div className="flex flex-wrap gap-2">
+                {['Needs', 'Wants', 'Investments'].map(type => {
+                  const active = selectedTypes.includes(type);
+                  return (
+                    <Button
+                      key={type}
+                      type="button"
+                      size="sm"
+                      variant={active ? 'default' : 'outline'}
+                      className="rounded-full"
+                      onClick={() => toggleFilter(type, selectedTypes, setSelectedTypes)}
+                    >
+                      {type}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Category</p>
+              <div className="flex flex-wrap gap-2">
+                {availableCategories.map(category => {
+                  const active = selectedCategories.includes(category);
+                  return (
+                    <Button
+                      key={category}
+                      type="button"
+                      size="sm"
+                      variant={active ? 'default' : 'outline'}
+                      className="rounded-full"
+                      onClick={() => toggleFilter(category, selectedCategories, setSelectedCategories)}
+                    >
+                      {category}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {Object.entries(filteredGroupedByDate).map(([date, dayExpenses], index) => {

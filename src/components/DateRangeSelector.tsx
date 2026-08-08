@@ -31,6 +31,18 @@ export default function DateRangeSelector() {
     }
   };
 
+  const formatCompactDisplayDate = () => {
+    try {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `${startStr} - ${endStr}`;
+    } catch {
+      return 'Range';
+    }
+  };
+
   const handlePreset = (type: string) => {
     const now = new Date();
     const format = (d: Date) => {
@@ -66,6 +78,7 @@ export default function DateRangeSelector() {
       >
         <CalendarIcon size={16} className="text-primary" />
         <span className="hidden sm:inline">{formatDisplayDate()}</span>
+        <span className="sm:hidden max-w-[90px] truncate">{formatCompactDisplayDate()}</span>
         <ChevronDown size={14} className="opacity-50 ml-1" />
       </Button>
 
