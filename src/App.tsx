@@ -24,7 +24,15 @@ function App() {
       
       if (currentUser && localStorage.getItem('spreadsheetId')) {
         // Trigger a background sync to pull latest data from Google Sheets
-        syncService.fetchInitialData().catch(console.error);
+        syncService.fetchInitialData().catch((err) => {
+          console.error('Failed to fetch initial data', err);
+          // If the token is invalid/expired, sign the user out so they can re-authenticate
+          if (err?.message?.includes('invalid authentication credentials') || err?.message?.includes('401')) {
+            console.warn('Auth token expired — signing out for re-login.');
+            localStorage.removeItem('googleAccessToken');
+            import('./services/googleAuth').then(({ signOut }) => signOut().catch(() => {}));
+          }
+        });
       }
     });
     return () => unsubscribe();

@@ -2,20 +2,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { db } from '../db/indexedDB';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useDateFilter } from '../components/DateFilterProvider';
 import { Expense } from '../types/expense';
 
 export default function Analysis() {
   const expenses = useLiveQuery(() => db.expenses.toArray());
   const loading = expenses === undefined;
+  const { startDate, endDate } = useDateFilter();
 
   if (loading) return <div className="p-4 md:p-8">Loading analysis...</div>;
 
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  
+  // Filter by selected date range
   const currentMonthExpenses = expenses.filter(e => {
-    const d = new Date(e.date);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    return e.date >= startDate && e.date <= endDate;
   });
 
   const totalSpent = currentMonthExpenses.reduce((acc, curr) => acc + curr.amount, 0);

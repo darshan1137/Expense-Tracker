@@ -1,14 +1,20 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { db } from '../db/indexedDB';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useDateFilter } from '../components/DateFilterProvider';
 import { Expense } from '../types/expense';
 
 export default function History() {
   const expenses = useLiveQuery(() => db.expenses.toArray());
   const loading = expenses === undefined;
+  const { startDate, endDate } = useDateFilter();
 
-  // We sort in render, but only if loaded
-  const sortedExpenses = expenses ? [...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+  // Filter and sort by selected date range
+  const sortedExpenses = expenses
+    ? [...expenses]
+        .filter(e => e.date >= startDate && e.date <= endDate)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    : [];
 
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
 

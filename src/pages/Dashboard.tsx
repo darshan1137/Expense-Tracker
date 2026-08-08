@@ -3,39 +3,37 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { db } from '../db/indexedDB';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useDateFilter } from '../components/DateFilterProvider';
 import { Expense } from '../types/expense';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { startDate, endDate } = useDateFilter();
   
   const expenses = useLiveQuery(() => db.expenses.toArray());
   const loading = expenses === undefined;
 
   if (loading) return <div className="p-4 md:p-8">Loading dashboard...</div>;
 
-  // Filter for current month
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  
-  const currentMonthExpenses = expenses.filter(e => {
-    const d = new Date(e.date);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  // Filter by selected date range
+  const filteredExpenses = expenses.filter(e => {
+    return e.date >= startDate && e.date <= endDate;
   });
 
-  const totalSpent = currentMonthExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-  const needsTotal = currentMonthExpenses.filter(e => e.type === 'Needs').reduce((acc, curr) => acc + curr.amount, 0);
-  const wantsTotal = currentMonthExpenses.filter(e => e.type === 'Wants').reduce((acc, curr) => acc + curr.amount, 0);
-  const investmentsTotal = currentMonthExpenses.filter(e => e.type === 'Investments').reduce((acc, curr) => acc + curr.amount, 0);
+  const totalSpent = filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+  const needsTotal = filteredExpenses.filter(e => e.type === 'Needs').reduce((acc, curr) => acc + curr.amount, 0);
+  const wantsTotal = filteredExpenses.filter(e => e.type === 'Wants').reduce((acc, curr) => acc + curr.amount, 0);
+  const investmentsTotal = filteredExpenses.filter(e => e.type === 'Investments').reduce((acc, curr) => acc + curr.amount, 0);
 
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
-
-  if (loading) return <div className="p-4">Loading dashboard...</div>;
 
   return (
     <div className="p-4 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       <div className="text-center space-y-2 mt-4">
-        <h2 className="text-lg font-medium text-muted-foreground">{new Date().toLocaleString('default', { month: 'long' })} {currentYear}</h2>
+        <h2 className="text-xs font-medium text-muted-foreground">
+          {new Date(startDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })} – {new Date(endDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </h2>
         <p className="text-sm text-muted-foreground">Total Spent</p>
         <h1 className="text-5xl font-bold text-foreground">{formatCurrency(totalSpent)}</h1>
       </div>
@@ -69,7 +67,7 @@ export default function Dashboard() {
           <Button variant="ghost" size="sm" onClick={() => navigate('/history')} className="hover:bg-primary/10 rounded-full transition-colors">View All</Button>
         </div>
         <div className="space-y-3">
-          {currentMonthExpenses.slice(-5).reverse().map((expense, i) => (
+          {filteredExpenses.slice(-5).reverse().map((expense, i) => (
             <Card 
               key={expense.id} 
               className="glass border-none shadow-sm transition-all duration-300 hover:scale-[1.01] hover:-translate-x-1 hover:shadow-md cursor-pointer animate-in fade-in slide-in-from-right-4"
@@ -94,8 +92,8 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           ))}
-          {currentMonthExpenses.length === 0 && (
-             <p className="text-center text-muted-foreground py-8">No expenses this month yet.</p>
+          {filteredExpenses.length === 0 && (
+             <p className="text-center text-muted-foreground py-8">No expenses in the selected date range.</p>
           )}
         </div>
       </div>
