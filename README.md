@@ -44,21 +44,14 @@
 
 ## 🏗 Architecture
 
-```
-┌─────────────────────────────────────────┐
-│              React Frontend             │
-│  Dashboard / Analysis / History / Add  │
-└────────────────┬────────────────────────┘
-                 │
-        ┌────────▼────────┐
-        │  Dexie IndexedDB │  ← Primary local store
-        │  (offline-first) │
-        └────────┬─────────┘
-                 │  Background batch sync
-        ┌────────▼──────────────┐
-        │  Google Sheets API v4  │  ← Remote backup
-        │  ("My Expense Tracker")│
-        └───────────────────────┘
+```mermaid
+flowchart TD
+    A["React Frontend (Dashboard / Analysis / History)"] -->|"Save Expense"| B[("Dexie IndexedDB (Local)")]
+    B -.->|"Background Batch Sync"| C[("Google Sheets API (Remote)")]
+    
+    style A fill:#61DAFB,stroke:#333,stroke-width:2px,color:#000
+    style B fill:#3178C6,stroke:#333,stroke-width:2px,color:#FFF
+    style C fill:#0F9D58,stroke:#333,stroke-width:2px,color:#FFF
 ```
 
 **Key design decisions:**
@@ -167,13 +160,6 @@ src/
 
 ---
 
-## 📸 Screenshots
-
-| Dashboard | Analysis | Add Expense |
-|---|---|---|
-| Summary of spending by category with date range | Donut + bar charts with custom tooltips | Category picker with custom category support |
-
----
 
 ## 🚢 Deployment
 
