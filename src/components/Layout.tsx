@@ -2,11 +2,32 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, History, PieChart, Settings, Plus, Moon, Sun } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import DateRangeSelector from './DateRangeSelector';
+import { useState, useEffect } from 'react';
+import { refreshGoogleToken } from '../services/googleAuth';
 
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  
+  const [authError, setAuthError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    const handleAuthError = () => setAuthError(true);
+    window.addEventListener('auth-error', handleAuthError);
+    return () => window.removeEventListener('auth-error', handleAuthError);
+  }, []);
+
+  const handleReconnect = async () => {
+    setRefreshing(true);
+    const token = await refreshGoogleToken();
+    setRefreshing(false);
+    if (token) {
+      setAuthError(false);
+      window.location.reload(); // Reload to resync
+    }
+  };
 
   const navItems = [
     { name: 'Home',     path: '/',          icon: LayoutDashboard },
@@ -20,6 +41,14 @@ export default function Layout() {
     <div className="flex flex-col h-screen bg-background text-foreground transition-colors duration-300">
 
       {/* ── Top Header ──────────────────────────────────────────── */}
+      {authError && (
+        <div className="bg-destructive text-destructive-foreground px-4 py-2.5 text-sm flex justify-between items-center z-50 animate-in slide-in-from-top-2">
+          <span className="font-medium">Sync paused: Session expired</span>
+          <button onClick={handleReconnect} disabled={refreshing} className="bg-background/20 hover:bg-background/30 px-3 py-1 rounded text-xs font-bold transition-colors">
+            {refreshing ? 'Connecting...' : 'Reconnect'}
+          </button>
+        </div>
+      )}
       <header className="sticky top-0 z-40 w-full glass">
         <div className="flex items-center justify-between h-16 px-4 md:px-8 max-w-7xl mx-auto w-full">
 

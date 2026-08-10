@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,11 +29,13 @@ export default function History() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [filtersVisible, setFiltersVisible] = useState(true);
 
-  const sortedExpenses = expenses
-    ? [...expenses]
-        .filter(e => e.date >= startDate && e.date <= endDate)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    : [];
+  const sortedExpenses = useMemo(() => {
+    return expenses
+      ? [...expenses]
+          .filter(e => e.date >= startDate && e.date <= endDate)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      : [];
+  }, [expenses, startDate, endDate]);
 
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
 
@@ -87,7 +91,6 @@ export default function History() {
     }
   };
 
-  if (loading) return <div className="p-4">Loading history...</div>;
 
   const grouped = sortedExpenses.reduce((acc, expense) => {
     const dateStr = new Date(expense.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -103,27 +106,33 @@ export default function History() {
     return acc;
   }, {} as Record<string, Expense[]>);
 
-  const groupedByCategory = sortedExpenses.reduce((acc, expense) => {
+  const groupedByCategory = useMemo(() => sortedExpenses.reduce((acc, expense) => {
     const key = expense.category || 'Uncategorized';
     if (!acc[key]) acc[key] = [];
     acc[key].push(expense);
     return acc;
-  }, {} as Record<string, Expense[]>);
+  }, {} as Record<string, Expense[]>), [sortedExpenses]);
 
-  const availableCategories = Array.from(new Set(sortedExpenses.map(expense => expense.category).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  const availableCategories = useMemo(() => 
+    Array.from(new Set(sortedExpenses.map(expense => expense.category).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+  [sortedExpenses]);
 
-  const filteredExpenses = sortedExpenses.filter(expense => {
+  const filteredExpenses = useMemo(() => sortedExpenses.filter(expense => {
     const matchesType = selectedTypes.length === 0 || selectedTypes.includes(expense.type);
     const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(expense.category);
     return matchesType && matchesCategory;
-  });
+  }), [sortedExpenses, selectedTypes, selectedCategories]);
 
-  const filteredGroupedByDate = filteredExpenses.reduce((acc, expense) => {
+  const filteredGroupedByDate = useMemo(() => filteredExpenses.reduce((acc, expense) => {
     const dateStr = new Date(expense.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     if (!acc[dateStr]) acc[dateStr] = [];
     acc[dateStr].push(expense);
     return acc;
-  }, {} as Record<string, Expense[]>);
+  }, {} as Record<string, Expense[]>), [filteredExpenses]);
+
+  const [listRef] = useAutoAnimate<HTMLDivElement>();
+
+  if (loading) return <div className="p-4">Loading history...</div>;
 
   const toggleFilter = (value: string, current: string[], setter: (next: string[]) => void) => {
     setter(current.includes(value) ? current.filter(item => item !== value) : [...current, value]);
@@ -211,6 +220,7 @@ export default function History() {
         )}
       </div>
 
+      <div ref={listRef} className="space-y-4">
       {Object.entries(filteredGroupedByDate).map(([date, dayExpenses], index) => {
         return (
           <div key={date} className="space-y-3 animate-in fade-in slide-in-from-bottom-4" style={{ animationFillMode: 'both', animationDelay: `${index * 120}ms` }}>
@@ -228,8 +238,8 @@ export default function History() {
               >
                 <CardContent className="p-4 flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 p-2.5 rounded-2xl">
-                      <span className="text-xl">📄</span>
+                    <div className="bg-primary/10 p-2.5 rounded-2xl text-primary">
+                      <CategoryIcon categoryName={expense.category} />
                     </div>
                     <div>
                       <p className="font-semibold text-sm text-foreground/90">{expense.description}</p>
@@ -250,6 +260,7 @@ export default function History() {
           </div>
         );
       })}
+      </div>
 
       {filteredExpenses.length === 0 && (
         <p className="text-center text-muted-foreground py-12">
@@ -318,6 +329,9 @@ export default function History() {
                       {DEFAULT_CATEGORIES.map(cat => (
                         <SelectItem key={cat.name} value={cat.name}>{cat.name} ({cat.type})</SelectItem>
                       ))}
+                      {editForm.category && !DEFAULT_CATEGORIES.some(c => c.name === editForm.category) && (
+                        <SelectItem value={editForm.category}>{editForm.category} (Custom)</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

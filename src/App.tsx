@@ -26,11 +26,10 @@ function App() {
         // Trigger a background sync to pull latest data from Google Sheets
         syncService.fetchInitialData().catch((err) => {
           console.error('Failed to fetch initial data', err);
-          // If the token is invalid/expired, sign the user out so they can re-authenticate
+          // If the token is invalid/expired, we'll stop sync but avoid forcing a log out
           if (err?.message?.includes('invalid authentication credentials') || err?.message?.includes('401')) {
-            console.warn('Auth token expired — signing out for re-login.');
-            localStorage.removeItem('googleAccessToken');
-            import('./services/googleAuth').then(({ signOut }) => signOut().catch(() => {}));
+            console.warn('Auth token expired — sync will fail until re-authenticated.');
+            // We removed the auto-logout so the user doesn't get kicked out frequently
           }
         });
       }

@@ -6,6 +6,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { name: 'Maintenance', type: 'Needs', icon: 'wrench' },
   { name: 'Health', type: 'Needs', icon: 'heart-pulse' },
   { name: 'Food', type: 'Needs', icon: 'utensils' },
+  { name: 'Grocery', type: 'Needs', icon: 'shopping-cart' },
   { name: 'Travel', type: 'Needs', icon: 'car' },
   { name: 'Recharge', type: 'Needs', icon: 'smartphone' },
   { name: 'Rent / Housing', type: 'Needs', icon: 'home' },

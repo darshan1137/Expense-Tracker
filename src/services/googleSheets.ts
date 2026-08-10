@@ -39,6 +39,9 @@ export class GoogleSheetsService {
 
     if (!response.ok) {
       const error = await response.json();
+      if (response.status === 401 || error.error?.message?.includes('401') || error.error?.message?.includes('invalid authentication credentials')) {
+        window.dispatchEvent(new CustomEvent('auth-error'));
+      }
       throw new Error(error.error?.message || 'Sheets API Error');
     }
     return response.json();
@@ -58,6 +61,9 @@ export class GoogleSheetsService {
 
     if (!response.ok) {
       const error = await response.json();
+      if (response.status === 401 || error.error?.message?.includes('401') || error.error?.message?.includes('invalid authentication credentials')) {
+        window.dispatchEvent(new CustomEvent('auth-error'));
+      }
       throw new Error(error.error?.message || 'Drive API Error');
     }
     return response.json();

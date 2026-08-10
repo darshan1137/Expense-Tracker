@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +19,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [timedOut, setTimedOut] = useState(false);
   const { startDate, endDate } = useDateFilter();
+  const [listRef] = useAutoAnimate<HTMLDivElement>();
   
   const expenses = useLiveQuery(() => db.expenses.toArray());
   const loading = expenses === undefined;
@@ -35,6 +38,20 @@ export default function Dashboard() {
     const timer = setTimeout(() => setTimedOut(true), 5000);
     return () => clearTimeout(timer);
   }, [loading]);
+
+  const filteredExpenses = useMemo(() => {
+    if (!expenses) return [];
+    return expenses.filter(e => e.date >= startDate && e.date <= endDate);
+  }, [expenses, startDate, endDate]);
+
+  const { totalSpent, needsTotal, wantsTotal, investmentsTotal } = useMemo(() => {
+    return {
+      totalSpent: filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0),
+      needsTotal: filteredExpenses.filter(e => e.type === 'Needs').reduce((acc, curr) => acc + curr.amount, 0),
+      wantsTotal: filteredExpenses.filter(e => e.type === 'Wants').reduce((acc, curr) => acc + curr.amount, 0),
+      investmentsTotal: filteredExpenses.filter(e => e.type === 'Investments').reduce((acc, curr) => acc + curr.amount, 0)
+    };
+  }, [filteredExpenses]);
 
   if (loading) {
     if (timedOut) {
@@ -69,15 +86,7 @@ export default function Dashboard() {
     );
   }
 
-  // Filter by selected date range
-  const filteredExpenses = expenses.filter(e => {
-    return e.date >= startDate && e.date <= endDate;
-  });
 
-  const totalSpent = filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-  const needsTotal = filteredExpenses.filter(e => e.type === 'Needs').reduce((acc, curr) => acc + curr.amount, 0);
-  const wantsTotal = filteredExpenses.filter(e => e.type === 'Wants').reduce((acc, curr) => acc + curr.amount, 0);
-  const investmentsTotal = filteredExpenses.filter(e => e.type === 'Investments').reduce((acc, curr) => acc + curr.amount, 0);
 
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
 
@@ -130,7 +139,7 @@ export default function Dashboard() {
             <Button variant="ghost" size="sm" onClick={() => navigate('/history')} className="hover:bg-primary/10 rounded-full transition-colors">View All</Button>
           </div>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-3" ref={listRef}>
           {groupBy === 'none' && (
             filteredExpenses.slice(-5).reverse().map((expense, i) => (
               <Card 
@@ -144,8 +153,8 @@ export default function Dashboard() {
               >
                 <CardContent className="p-4 flex justify-between items-center">
                   <div className="flex items-center space-x-4">
-                    <div className="bg-primary/10 p-2.5 rounded-2xl transition-colors hover:bg-primary/20">
-                      <span className="text-xl">🛒</span>
+                    <div className="bg-primary/10 p-2.5 rounded-2xl transition-colors hover:bg-primary/20 text-primary">
+                      <CategoryIcon categoryName={expense.category} />
                     </div>
                     <div>
                       <p className="font-semibold">{expense.description}</p>
@@ -177,9 +186,14 @@ export default function Dashboard() {
                   {items.map(item => (
                     <Card key={item.id} className="glass" onClick={() => { setSelectedExpense(item); setSheetMode('actions'); }}>
                       <CardContent className="p-3 flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{item.description}</p>
-                          <p className="text-xs text-muted-foreground">{item.category}</p>
+                        <div className="flex items-center gap-3">
+                          <div className="bg-primary/10 p-2 rounded-xl text-primary hidden sm:block">
+                            <CategoryIcon categoryName={item.category} />
+                          </div>
+                          <div>
+                            <p className="font-medium">{item.description}</p>
+                            <p className="text-xs text-muted-foreground">{item.category}</p>
+                          </div>
                         </div>
                         <div className="text-right">
                           <p className="font-bold">{formatCurrency(item.amount)}</p>
@@ -206,9 +220,14 @@ export default function Dashboard() {
                   {items.map(item => (
                     <Card key={item.id} className="glass" onClick={() => { setSelectedExpense(item); setSheetMode('actions'); }}>
                       <CardContent className="p-3 flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{item.description}</p>
-                          <p className="text-xs text-muted-foreground">{item.type}</p>
+                        <div className="flex items-center gap-3">
+                          <div className="bg-primary/10 p-2 rounded-xl text-primary hidden sm:block">
+                            <CategoryIcon categoryName={item.category} />
+                          </div>
+                          <div>
+                            <p className="font-medium">{item.description}</p>
+                            <p className="text-xs text-muted-foreground">{item.type}</p>
+                          </div>
                         </div>
                         <div className="text-right">
                           <p className="font-bold">{formatCurrency(item.amount)}</p>
@@ -301,6 +320,9 @@ export default function Dashboard() {
                       {DEFAULT_CATEGORIES.map(cat => (
                         <SelectItem key={cat.name} value={cat.name}>{cat.name} ({cat.type})</SelectItem>
                       ))}
+                      {editForm.category && !DEFAULT_CATEGORIES.some(c => c.name === editForm.category) && (
+                        <SelectItem value={editForm.category}>{editForm.category} (Custom)</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
