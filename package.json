@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/core": "^6.2.1",
+    "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
     "@formkit/auto-animate": "^0.10.0",
     "@hookform/resolvers": "^5.7.1",
     "@radix-ui/react-dialog": "^1.1.23",
@@ -24,6 +26,7 @@
     "dexie": "^4.4.4",
     "dexie-react-hooks": "^4.4.0",
     "firebase": "^12.17.1",
+    "framer-motion": "^13.1.0",
     "gapi-script": "^1.2.0",
     "lucide-react": "^1.30.0",
     "react": "^19.2.8",

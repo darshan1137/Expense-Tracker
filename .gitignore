@@ -30,8 +30,12 @@ dist-ssr
 .env.test.local
 .env.production.local
 
-# Vite
+# Vite & PWA
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+dev-dist/
+
+# Artifacts
+public/*.apk
 
 .vercel

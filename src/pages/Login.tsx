@@ -9,9 +9,9 @@ export default function Login() {
     try {
       await signInWithGoogle();
       // On success, Firebase auth state listener in App will trigger and redirect to onboarding/dashboard
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Failed to login');
+      alert(`Failed to login: ${error?.message || error}`);
     }
   };
 

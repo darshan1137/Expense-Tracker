@@ -128,6 +128,22 @@ export class GoogleSheetsService {
     }
   }
 
+  async clearAppConfig() {
+    try {
+      this.accessToken = this.accessToken || localStorage.getItem('googleAccessToken');
+      const list = await this.fetchDriveAPI('?spaces=appDataFolder&q=name=%27expense-tracker-config.json%27&fields=files(id)');
+      if (list.files && list.files.length > 0) {
+        const fileId = list.files[0].id;
+        await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${this.accessToken}` }
+        });
+      }
+    } catch (e) {
+      console.error('Error deleting app config from Drive', e);
+    }
+  }
+
   async verifySpreadsheetAccess(id: string) {
     try {
       const data = await this.fetchAPI(`/${id}`);

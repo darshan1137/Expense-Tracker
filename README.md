@@ -163,7 +163,7 @@ src/
 
 ## 🚢 Deployment
 
-### Deploy to Vercel
+### Deploy to Web (Vercel)
 
 ```bash
 npm install -g vercel
@@ -176,6 +176,23 @@ Add your environment variables in the **Vercel Dashboard → Project → Setting
 ### Continuous Deployment
 
 Push to `main` branch on GitHub — Vercel automatically deploys via GitHub integration.
+
+### Deploy to Mobile (Capacitor / Android)
+
+The app is fully configured for native deployment via Capacitor!
+To build and deploy to a connected Android device:
+
+```bash
+# 1. Build the web project
+npm run build
+
+# 2. Sync web assets into native Android project
+cd capacitor
+npx cap sync
+
+# 3. Build and run on a connected device
+npx cap run android
+```
 
 ---
 
