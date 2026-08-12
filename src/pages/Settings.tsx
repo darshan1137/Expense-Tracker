@@ -106,6 +106,28 @@ export default function Settings() {
           </div>
         )}
 
+        <div className="space-y-2">
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Legal</h3>
+          <Card className="bg-card">
+            <CardContent className="p-0">
+              <div 
+                className="p-4 flex justify-between items-center border-b border-border cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => navigate('/privacy')}
+              >
+                <span className="text-sm font-medium">Privacy Policy</span>
+                <span className="text-muted-foreground">→</span>
+              </div>
+              <div 
+                className="p-4 flex justify-between items-center cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => navigate('/terms')}
+              >
+                <span className="text-sm font-medium">Terms of Service</span>
+                <span className="text-muted-foreground">→</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="pt-8">
           <Button variant="destructive" className="w-full" onClick={handleLogout}>
             Logout
