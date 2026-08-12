@@ -36,6 +36,4 @@ vite.config.ts.timestamp-*
 dev-dist/
 
 # Artifacts
-public/*.apk
-
 .vercel

@@ -35,6 +35,12 @@ export default function Login() {
           Continue with Google
         </Button>
 
+        <div className="mt-8 text-xs text-muted-foreground flex gap-4">
+          <a href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</a>
+          <span>&bull;</span>
+          <a href="/terms" className="hover:text-primary transition-colors">Terms of Service</a>
+        </div>
+
       </div>
     </div>
   );

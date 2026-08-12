@@ -12,6 +12,8 @@ import History from './pages/History';
 import Analysis from './pages/Analysis';
 import Settings from './pages/Settings';
 import AddExpense from './pages/AddExpense';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -52,6 +54,8 @@ function App() {
       <Routes>
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
         <Route path="/onboarding" element={user ? <Onboarding /> : <Navigate to="/login" />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
         
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/" element={<Dashboard />} />
