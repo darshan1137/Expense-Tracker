@@ -15,7 +15,22 @@ export default function Layout() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const handleAuthError = () => setAuthError(true);
+    let isRefreshing = false;
+    const handleAuthError = async () => {
+      if (isRefreshing) return;
+      isRefreshing = true;
+      // Try silently reconnecting in the background
+      const token = await refreshGoogleToken();
+      if (token) {
+        setAuthError(false);
+        // Dispatch an event so components know auth is restored
+        window.dispatchEvent(new Event('auth-restored'));
+      } else {
+        // Only show error banner if silent refresh fails
+        setAuthError(true);
+      }
+      isRefreshing = false;
+    };
     window.addEventListener('auth-error', handleAuthError);
     return () => window.removeEventListener('auth-error', handleAuthError);
   }, []);
