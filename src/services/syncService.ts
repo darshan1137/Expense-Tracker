@@ -3,22 +3,32 @@ import { sheetsService } from './googleSheets';
 import { Expense } from '../types/expense';
 
 export class SyncService {
+  private syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+  scheduleSync() {
+    if (!navigator.onLine) return;
+    if (this.syncTimer) clearTimeout(this.syncTimer);
+    this.syncTimer = setTimeout(async () => {
+      await this.processQueue();
+    }, 600);
+  }
+
   async addExpense(expense: Expense) {
     await db.expenses.put(expense);
     await db.syncQueue.put({ id: expense.id, action: 'ADD', payload: expense });
-    if (navigator.onLine) await this.processQueue();
+    this.scheduleSync();
   }
 
   async updateExpense(expense: Expense) {
     await db.expenses.put(expense);
     await db.syncQueue.put({ id: `update-${expense.id}`, action: 'UPDATE', payload: expense });
-    if (navigator.onLine) await this.processQueue();
+    this.scheduleSync();
   }
 
   async deleteExpense(id: string) {
     await db.expenses.delete(id);
     await db.syncQueue.put({ id: `delete-${id}`, action: 'DELETE', payload: { id } });
-    if (navigator.onLine) await this.processQueue();
+    this.scheduleSync();
   }
 
   async processQueue() {
@@ -40,19 +50,23 @@ export class SyncService {
     }
 
     // Process UPDATEs
-    for (const item of updateItems) {
+    if (updateItems.length > 0) {
       try {
-        await sheetsService.updateExpense(item.payload);
-        await db.syncQueue.delete(item.id);
-      } catch (e) { console.error('Failed to sync UPDATE', e); }
+        await sheetsService.batchUpdateExpenses(updateItems.map(i => i.payload));
+        await db.syncQueue.bulkDelete(updateItems.map(i => i.id));
+      } catch (e) {
+        console.error('Failed to sync batch UPDATE', e);
+      }
     }
 
     // Process DELETEs
-    for (const item of deleteItems) {
+    if (deleteItems.length > 0) {
       try {
-        await sheetsService.deleteExpense(item.payload.id);
-        await db.syncQueue.delete(item.id);
-      } catch (e) { console.error('Failed to sync DELETE', e); }
+        await sheetsService.batchDeleteExpenses(deleteItems.map(i => i.payload.id));
+        await db.syncQueue.bulkDelete(deleteItems.map(i => i.id));
+      } catch (e) {
+        console.error('Failed to sync batch DELETE', e);
+      }
     }
   }
 
@@ -74,5 +88,5 @@ export class SyncService {
 
 export const syncService = new SyncService();
 
-window.addEventListener('online', () => { syncService.processQueue(); });
+window.addEventListener('online', () => { syncService.scheduleSync(); });
 

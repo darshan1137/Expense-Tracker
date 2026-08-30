@@ -233,56 +233,89 @@ export class GoogleSheetsService {
     }));
   }
 
-  // Find which row a given expense ID is in (1-indexed, accounting for header row)
-  private async findRowIndexById(id: string): Promise<number | null> {
+
+
+  // Find row indices for multiple IDs in a single read
+  private async findRowIndicesByIds(ids: string[]): Promise<Record<string, number>> {
     const data = await this.fetchAPI(`/${this.spreadsheetId}/values/Transactions!A:A`);
     const rows: string[][] = data.values || [];
-    const rowIndex = rows.findIndex(r => r[0] === id);
-    return rowIndex === -1 ? null : rowIndex + 1; // 1-indexed in Sheets API
+    const result: Record<string, number> = {};
+    rows.forEach((row, index) => {
+      if (ids.includes(row[0])) {
+        result[row[0]] = index + 1; // 1-indexed
+      }
+    });
+    return result;
+  }
+
+  async batchUpdateExpenses(expenses: Expense[]) {
+    if (!this.spreadsheetId || expenses.length === 0) return;
+    const indices = await this.findRowIndicesByIds(expenses.map(e => e.id));
+    const dataUpdates: any[] = [];
+    const adds: Expense[] = [];
+
+    expenses.forEach(e => {
+        const rowIndex = indices[e.id];
+        if (rowIndex) {
+            dataUpdates.push({
+                range: `Transactions!A${rowIndex}:G${rowIndex}`,
+                values: [[e.id, e.date, e.description, e.category, e.type, e.amount, e.notes || '']]
+            });
+        } else {
+            adds.push(e); // fallback if missing
+        }
+    });
+
+    if (dataUpdates.length > 0) {
+        await this.fetchAPI(`/${this.spreadsheetId}/values:batchUpdate`, {
+            method: 'POST',
+            body: JSON.stringify({
+                valueInputOption: 'USER_ENTERED',
+                data: dataUpdates
+            })
+        });
+    }
+
+    if (adds.length > 0) {
+        await this.batchAddExpenses(adds);
+    }
   }
 
   async updateExpense(expense: Expense) {
-    if (!this.spreadsheetId) throw new Error("No spreadsheet connected");
-    const rowIndex = await this.findRowIndexById(expense.id);
-    if (rowIndex === null) {
-      // If not found in sheet, just add it
-      await this.batchAddExpenses([expense]);
-      return;
-    }
-    const range = `Transactions!A${rowIndex}:G${rowIndex}`;
-    await this.fetchAPI(`/${this.spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        values: [[
-          expense.id, expense.date, expense.description,
-          expense.category, expense.type, expense.amount, expense.notes || ''
-        ]]
-      })
+    await this.batchUpdateExpenses([expense]);
+  }
+
+  async batchDeleteExpenses(ids: string[]) {
+    if (!this.spreadsheetId || ids.length === 0) return;
+    const indices = await this.findRowIndicesByIds(ids);
+    const rowIndicesToDelete = Object.values(indices).map(idx => idx - 1); // 0-indexed for batchUpdate
+    if (rowIndicesToDelete.length === 0) return;
+
+    // Sort descending so deleting rows doesn't shift the indices of subsequent deletions
+    rowIndicesToDelete.sort((a, b) => b - a);
+
+    const meta = await this.fetchAPI(`/${this.spreadsheetId}?fields=sheets.properties`);
+    const sheetId = meta.sheets[0].properties.sheetId;
+
+    const requests = rowIndicesToDelete.map(idx => ({
+        deleteDimension: {
+            range: {
+                sheetId,
+                dimension: 'ROWS',
+                startIndex: idx,
+                endIndex: idx + 1
+            }
+        }
+    }));
+
+    await this.fetchAPI(`/${this.spreadsheetId}:batchUpdate`, {
+        method: 'POST',
+        body: JSON.stringify({ requests })
     });
   }
 
   async deleteExpense(id: string) {
-    if (!this.spreadsheetId) throw new Error("No spreadsheet connected");
-    const rowIndex = await this.findRowIndexById(id);
-    if (rowIndex === null) return; // Already gone
-    // Get sheet metadata to find sheetId
-    const meta = await this.fetchAPI(`/${this.spreadsheetId}?fields=sheets.properties`);
-    const sheetId = meta.sheets[0].properties.sheetId;
-    await this.fetchAPI(`/${this.spreadsheetId}:batchUpdate`, {
-      method: 'POST',
-      body: JSON.stringify({
-        requests: [{
-          deleteDimension: {
-            range: {
-              sheetId,
-              dimension: 'ROWS',
-              startIndex: rowIndex - 1, // 0-indexed
-              endIndex: rowIndex
-            }
-          }
-        }]
-      })
-    });
+    await this.batchDeleteExpenses([id]);
   }
 }
 
