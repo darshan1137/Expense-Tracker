@@ -46,7 +46,7 @@ export default function Layout() {
   };
 
   const navItems = [
-    { name: 'Home',     path: '/',          icon: LayoutDashboard },
+    { name: 'Home',     path: '/dashboard',  icon: LayoutDashboard },
     { name: 'History',  path: '/history',   icon: History },
     { name: 'Add',      path: '/add',       icon: null },          // FAB slot
     { name: 'Analysis', path: '/analysis',  icon: PieChart },
@@ -70,7 +70,7 @@ export default function Layout() {
 
           {/* Logo + Date picker */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 group cursor-pointer" onClick={() => navigate('/')}>
+            <div className="flex items-center gap-2 group cursor-pointer" onClick={() => navigate('/dashboard')}>
               <img
                 src="/logo.png"
                 alt="Logo"

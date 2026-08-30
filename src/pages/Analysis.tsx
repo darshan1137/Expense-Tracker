@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, AreaChart, Area, CartesianGrid } from 'recharts';
 import { useState, useMemo } from 'react';
 import { db } from '../db/indexedDB';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -7,7 +8,7 @@ import { useDateFilter } from '../components/DateFilterProvider';
 import { 
   TrendingUp, TrendingDown, Target, CalendarDays, 
   AlertTriangle, PieChart as PieChartIcon, ArrowUpRight,
-  Zap, Calendar, AlertCircle
+  Zap, Calendar, AlertCircle, Activity,
 } from 'lucide-react';
 
 export default function Analysis() {
@@ -16,6 +17,7 @@ export default function Analysis() {
   const { startDate, endDate } = useDateFilter();
 
   const [pieActiveIndex, setPieActiveIndex] = useState<number | null>(null);
+  const [trendFilter, setTrendFilter] = useState<'week'|'month'|'year'|'all'>('month');
 
   // Filter by selected date range
   const currentMonthExpenses = useMemo(() => {
@@ -46,6 +48,48 @@ export default function Analysis() {
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5), [categoryTotals]);
+
+  // Trend Data based on filter
+  const trendData = useMemo(() => {
+    if (!expenses) return [];
+    const now = new Date();
+    let filtered = expenses;
+    
+    if (trendFilter === 'week') {
+      const ago = new Date(); ago.setDate(now.getDate() - 7);
+      filtered = expenses.filter(e => e.date >= ago.toISOString().split('T')[0]);
+    } else if (trendFilter === 'month') {
+      const ago = new Date(); ago.setDate(now.getDate() - 30);
+      filtered = expenses.filter(e => e.date >= ago.toISOString().split('T')[0]);
+    } else if (trendFilter === 'year') {
+      const ago = new Date(); ago.setFullYear(now.getFullYear() - 1);
+      filtered = expenses.filter(e => e.date >= ago.toISOString().split('T')[0]);
+    }
+
+    const grouped = filtered.reduce((acc, exp) => {
+      const d = new Date(exp.date);
+      let sortKey = exp.date;
+      let label = d.getDate().toString();
+      
+      if (trendFilter === 'week') {
+        label = d.toLocaleDateString('en-US', { weekday: 'short' });
+      } else if (trendFilter === 'year') {
+        sortKey = exp.date.substring(0, 7); // YYYY-MM
+        label = d.toLocaleDateString('en-US', { month: 'short' });
+      } else if (trendFilter === 'all') {
+        sortKey = d.getFullYear().toString();
+        label = sortKey;
+      }
+
+      if (!acc[sortKey]) {
+        acc[sortKey] = { label, amount: 0, sortKey };
+      }
+      acc[sortKey].amount += exp.amount;
+      return acc;
+    }, {} as Record<string, { label: string, amount: number, sortKey: string }>);
+    
+    return Object.values(grouped).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  }, [expenses, trendFilter]);
 
   // Premium Insights Math
   const insights = useMemo(() => {
@@ -110,13 +154,24 @@ export default function Analysis() {
     const top2Total = (sortedCats[0] || 0) + (sortedCats[1] || 0);
     const concentrationPct = (top2Total / totalSpent) * 100;
 
+    // 7. Projected Spend (Burn Rate)
+    const today = new Date();
+    let projectedTotal = totalSpent;
+    if (today <= end && today >= start) {
+      const daysPassed = Math.max(1, today.getDate());
+      const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      const dailyBurn = totalSpent / daysPassed;
+      projectedTotal = dailyBurn * daysInMonth;
+    }
+
     return {
       trend,
       needsPct, wantsPct, invPct,
       weekendWantsPct,
       largestExpense,
       maxSpike,
-      concentrationPct
+      concentrationPct,
+      projectedTotal
     };
   }, [expenses, startDate, endDate, totalSpent, needsTotal, wantsTotal, investmentsTotal, categoryTotals, currentMonthExpenses]);
 
@@ -139,13 +194,26 @@ export default function Analysis() {
     return null;
   };
 
+  const TrendTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const item = payload[0].payload;
+      return (
+        <div className="glass px-4 py-3 rounded-xl border border-border shadow-xl">
+          <p className="font-medium text-foreground mb-1">{item.label}</p>
+          <p className="text-primary font-bold text-lg">{formatCurrency(payload[0].value)}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="p-4 md:p-8 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <h2 className="text-2xl font-bold mb-6">Monthly Analysis</h2>
 
       {/* Visual Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="glass cursor-default transition-all duration-300 hover:shadow-xl">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="glass cursor-default transition-all duration-300 hover:shadow-xl lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Distribution</CardTitle>
           </CardHeader>
@@ -196,7 +264,43 @@ export default function Analysis() {
           </CardContent>
         </Card>
 
-        <Card className="glass cursor-default transition-all duration-300 hover:shadow-xl">
+        <Card className="glass cursor-default transition-all duration-300 hover:shadow-xl lg:col-span-2 flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium">Spending Trend</CardTitle>
+            <Select value={trendFilter} onValueChange={(val: any) => setTrendFilter(val)}>
+              <SelectTrigger className="w-32 h-8 text-xs">
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="week">Past 7 Days</SelectItem>
+                <SelectItem value="month">Past 30 Days</SelectItem>
+                <SelectItem value="year">Past Year</SelectItem>
+                <SelectItem value="all">All Time</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardHeader>
+          <CardContent className="flex-1">
+            <div className="h-64 w-full mt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.4} />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fill: 'currentColor', opacity: 0.6, fontSize: 12}} dy={10} />
+                  <YAxis hide />
+                  <Tooltip content={<TrendTooltip />} />
+                  <Area type="monotone" dataKey="amount" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorAmount)" activeDot={{ r: 6, fill: "hsl(var(--primary))", stroke: "var(--background)", strokeWidth: 2 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass cursor-default transition-all duration-300 hover:shadow-xl lg:col-span-3">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Top Categories</CardTitle>
           </CardHeader>
@@ -334,18 +438,18 @@ export default function Analysis() {
               </div>
             </div>
 
-            {/* Largest Expense & Concentration */}
+            {/* Projected Spend & Concentration (combined wide card) */}
             <div className="glass p-5 rounded-2xl border border-border/50 relative overflow-hidden group hover:shadow-lg transition-all duration-300 lg:col-span-2 flex flex-col justify-center">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               
               <div className="grid grid-cols-2 gap-4 relative z-10 divide-x divide-border/50">
                 <div className="pr-4">
-                  <p className="text-sm font-medium text-muted-foreground">Largest Expense</p>
-                  <p className="text-xl font-bold mt-1 text-foreground break-words line-clamp-1">
-                    {insights.largestExpense?.description || 'None'}
+                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5"><Activity size={14} /> Projected Monthly Spend</p>
+                  <p className="text-xl font-bold mt-1 text-foreground">
+                    {formatCurrency(insights.projectedTotal)}
                   </p>
-                  <p className="text-sm font-medium text-primary mt-0.5">
-                    {insights.largestExpense ? formatCurrency(insights.largestExpense.amount) : '₹0'}
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Based on your current daily burn rate.
                   </p>
                 </div>
                 <div className="pl-4">

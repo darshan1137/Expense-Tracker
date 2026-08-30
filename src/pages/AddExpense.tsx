@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DEFAULT_CATEGORIES, getCategoryType } from '../utils/categories';
+import { useCategories } from '../hooks/useCategories';
 import { generateTransactionId } from '../utils/transactionId';
 import { syncService } from '../services/syncService';
+import { BookmarkPlus } from 'lucide-react';
 
 export default function AddExpense() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const { allCategories, add: addCategory } = useCategories();
+
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     amount: '',
@@ -21,16 +22,36 @@ export default function AddExpense() {
     customCategoryType: 'Needs' as 'Needs' | 'Wants' | 'Investments'
   });
 
+  const isCustomNew = formData.category === '__new_custom__';
+
+  const handleSaveCustomCategory = async () => {
+    if (!formData.customCategoryName.trim()) return;
+    await addCategory({
+      name: formData.customCategoryName.trim(),
+      type: formData.customCategoryType,
+    });
+    // Switch the category selection to the newly saved one
+    setFormData(prev => ({ ...prev, category: prev.customCategoryName.trim() }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.amount || !formData.category || !formData.description) return;
-    if (formData.category === 'Other' && !formData.customCategoryName) return;
-    
+    if (isCustomNew && !formData.customCategoryName.trim()) return;
+
     setLoading(true);
     try {
-      const isCustom = formData.category === 'Other';
-      const type = isCustom ? formData.customCategoryType : getCategoryType(formData.category);
-      const finalCategory = isCustom ? formData.customCategoryName : formData.category;
+      const isNew = isCustomNew;
+      const finalCategory = isNew ? formData.customCategoryName.trim() : formData.category;
+      const existingCat = allCategories.find(c => c.name === formData.category);
+      const type = isNew
+        ? formData.customCategoryType
+        : (existingCat?.type ?? 'Needs');
+
+      // Auto-save the custom category so it appears next time
+      if (isNew && finalCategory) {
+        await addCategory({ name: finalCategory, type });
+      }
 
       const expense = {
         id: generateTransactionId(formData.date),
@@ -44,8 +65,7 @@ export default function AddExpense() {
 
       await syncService.addExpense(expense);
       alert('Expense added successfully!');
-      
-      // Clear form but keep the date
+
       setFormData(prev => ({
         ...prev,
         amount: '',
@@ -66,75 +86,98 @@ export default function AddExpense() {
   return (
     <div className="p-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <h2 className="text-2xl font-bold mb-6">Add Expense</h2>
-      
+
       <form onSubmit={handleSubmit} className="space-y-6 bg-card p-6 rounded-xl shadow-sm border">
-        
+
+        {/* Date */}
         <div className="space-y-2">
           <Label htmlFor="date">Date</Label>
-          <Input 
+          <Input
             id="date"
-            type="date" 
+            type="date"
             value={formData.date}
-            onChange={e => setFormData({...formData, date: e.target.value})}
+            onChange={e => setFormData({ ...formData, date: e.target.value })}
             required
             disabled={loading}
           />
         </div>
 
+        {/* Amount */}
         <div className="space-y-2">
           <Label htmlFor="amount">Amount (₹)</Label>
-          <Input 
+          <Input
             id="amount"
-            type="number" 
+            type="number"
             step="0.01"
             min="0"
             placeholder="0.00"
             value={formData.amount}
-            onChange={e => setFormData({...formData, amount: e.target.value})}
+            onChange={e => setFormData({ ...formData, amount: e.target.value })}
             required
             disabled={loading}
           />
         </div>
 
+        {/* Category */}
         <div className="space-y-2">
           <Label>Category</Label>
-          <Select 
+          <Select
             value={formData.category}
-            onValueChange={val => setFormData({...formData, category: val})}
+            onValueChange={val => setFormData({ ...formData, category: val })}
             disabled={loading}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a category" />
             </SelectTrigger>
             <SelectContent>
-              {DEFAULT_CATEGORIES.map(cat => (
-                <SelectItem key={cat.name} value={cat.name}>
-                  {cat.name} ({cat.type})
-                </SelectItem>
-              ))}
-              <SelectItem value="Other">Other (Custom)</SelectItem>
+              {/* Default (visible) + custom categories — grouped by type */}
+              {(['Needs', 'Wants', 'Investments'] as const).map(group => {
+                const groupCats = allCategories.filter(c => c.type === group);
+                if (groupCats.length === 0) return null;
+                return (
+                  <>
+                    <SelectItem key={`__${group}`} value={`__${group}`} disabled className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      {group}
+                    </SelectItem>
+                    {groupCats.map(cat => (
+                      <SelectItem key={cat.name} value={cat.name}>
+                        {cat.name}{cat.source === 'custom' ? ' ★' : ''}
+                      </SelectItem>
+                    ))}
+                  </>
+                );
+              })}
+
+              {/* Add new custom option */}
+              <SelectItem value="__new_custom__" className="text-primary font-medium">
+                + Add new custom category
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {formData.category === 'Other' && (
+        {/* New custom category fields */}
+        {isCustomNew && (
           <div className="space-y-4 p-4 border border-primary/20 rounded-lg bg-primary/5 animate-in fade-in zoom-in-95">
+            <p className="text-sm font-semibold text-primary">New custom category</p>
+
             <div className="space-y-2">
-              <Label htmlFor="customCategoryName">Custom Category Name</Label>
-              <Input 
+              <Label htmlFor="customCategoryName">Category Name</Label>
+              <Input
                 id="customCategoryName"
                 placeholder="e.g. Pet Supplies"
                 value={formData.customCategoryName}
-                onChange={e => setFormData({...formData, customCategoryName: e.target.value})}
+                onChange={e => setFormData({ ...formData, customCategoryName: e.target.value })}
                 required
                 disabled={loading}
               />
             </div>
+
             <div className="space-y-2">
               <Label>Category Type</Label>
-              <Select 
+              <Select
                 value={formData.customCategoryType}
-                onValueChange={(val: any) => setFormData({...formData, customCategoryType: val})}
+                onValueChange={(val: any) => setFormData({ ...formData, customCategoryType: val })}
                 disabled={loading}
               >
                 <SelectTrigger>
@@ -147,28 +190,46 @@ export default function AddExpense() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Save to My Categories button */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 text-primary border-primary/30 hover:bg-primary/10"
+              onClick={handleSaveCustomCategory}
+              disabled={!formData.customCategoryName.trim()}
+            >
+              <BookmarkPlus size={15} />
+              Save to My Categories
+            </Button>
+            <p className="text-xs text-muted-foreground -mt-2">
+              Saved categories appear in the dropdown every time.
+            </p>
           </div>
         )}
 
+        {/* Description */}
         <div className="space-y-2">
           <Label htmlFor="description">Description</Label>
-          <Input 
+          <Input
             id="description"
             placeholder="What was this for?"
             value={formData.description}
-            onChange={e => setFormData({...formData, description: e.target.value})}
+            onChange={e => setFormData({ ...formData, description: e.target.value })}
             required
             disabled={loading}
           />
         </div>
 
+        {/* Notes */}
         <div className="space-y-2">
           <Label htmlFor="notes">Notes (Optional)</Label>
-          <Input 
+          <Input
             id="notes"
             placeholder="Any additional details..."
             value={formData.notes}
-            onChange={e => setFormData({...formData, notes: e.target.value})}
+            onChange={e => setFormData({ ...formData, notes: e.target.value })}
             disabled={loading}
           />
         </div>

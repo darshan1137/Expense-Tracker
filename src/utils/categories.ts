@@ -2,7 +2,7 @@ import { Category } from '../types/category';
 
 export const DEFAULT_CATEGORIES: Category[] = [
   // Needs
-  { name: 'Electricity Bill', type: 'Needs', icon: 'zap' },
+  { name: 'Monthly Bills', type: 'Needs', icon: 'receipt' },
   { name: 'Maintenance', type: 'Needs', icon: 'wrench' },
   { name: 'Health', type: 'Needs', icon: 'heart-pulse' },
   { name: 'Food', type: 'Needs', icon: 'utensils' },
