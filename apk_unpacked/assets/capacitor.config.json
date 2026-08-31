@@ -1,0 +1,16 @@
+{
+	"appId": "com.codinggurus.expensemanager",
+	"appName": "Expense Tracker",
+	"webDir": "../dist",
+	"bundledWebRuntime": false,
+	"plugins": {
+		"GoogleAuth": {
+			"scopes": [
+				"profile",
+				"email"
+			],
+			"serverClientId": "136500364240-hqsirv6umistflqmu7kcgeoh41co8gt4.apps.googleusercontent.com",
+			"forceCodeForRefreshToken": true
+		}
+	}
+}

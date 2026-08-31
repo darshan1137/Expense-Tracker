@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 /** 
  * Compares two semver strings.
@@ -27,7 +28,7 @@ export interface UpdateInfo {
  * When the deployed version.json has a higher version than this constant,
  * the update dialog will appear automatically inside the app.
  */
-export const CURRENT_APP_VERSION = '1.1.2';
+export const CURRENT_APP_VERSION = '1.1.3';
 
 export function useAppUpdater() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
@@ -36,6 +37,9 @@ export function useAppUpdater() {
   useEffect(() => {
     const check = async () => {
       try {
+        // Only show APK updates if running as a native mobile app
+        if (!Capacitor.isNativePlatform()) return;
+
         // Bust the cache so we always get the latest version.json
         // NOTE: Use the absolute live URL so Capacitor native apps fetch from the web, 
         // rather than their bundled local assets.

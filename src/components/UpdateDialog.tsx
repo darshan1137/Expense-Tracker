@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Sparkles, ArrowRight } from 'lucide-react';
+import { Download, X, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
 import type { UpdateInfo } from '../hooks/useAppUpdater';
 import { CURRENT_APP_VERSION } from '../hooks/useAppUpdater';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { FileOpener } from '@capawesome-team/capacitor-file-opener';
+import { Capacitor } from '@capacitor/core';
 
 interface UpdateDialogProps {
   updateInfo: UpdateInfo | null;
@@ -9,7 +13,48 @@ interface UpdateDialogProps {
 }
 
 export default function UpdateDialog({ updateInfo, onDismiss }: UpdateDialogProps) {
+  const [downloading, setDownloading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [fallbackPrompt, setFallbackPrompt] = useState(false);
+
   if (!updateInfo) return null;
+
+  const handleDownload = async () => {
+    if (!Capacitor.isNativePlatform()) {
+      window.open(updateInfo.apkUrl, '_blank');
+      onDismiss();
+      return;
+    }
+
+    setDownloading(true);
+    setProgress(0);
+    setFallbackPrompt(false);
+
+    try {
+      const progressListener = await Filesystem.addListener('progress', (status) => {
+        if (status.contentLength > 0) {
+          setProgress(status.bytes / status.contentLength);
+        }
+      });
+
+      const result = await Filesystem.downloadFile({
+        url: updateInfo.apkUrl,
+        path: 'ExpenseTracker-update.apk',
+        directory: Directory.Cache,
+        progress: true
+      });
+
+      progressListener.remove();
+
+      await FileOpener.openFile({ path: result.path });
+      onDismiss();
+    } catch (err) {
+      console.error('Download or install failed', err);
+      setFallbackPrompt(true);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -22,7 +67,7 @@ export default function UpdateDialog({ updateInfo, onDismiss }: UpdateDialogProp
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
-            onClick={onDismiss}
+            onClick={!downloading ? onDismiss : undefined}
           />
 
           {/* Dialog card */}
@@ -44,7 +89,8 @@ export default function UpdateDialog({ updateInfo, onDismiss }: UpdateDialogProp
                 <button
                   id="update-dialog-close"
                   onClick={onDismiss}
-                  className="absolute top-5 right-5 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                  disabled={downloading}
+                  className="absolute top-5 right-5 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all disabled:opacity-50"
                   aria-label="Dismiss update"
                 >
                   <X size={18} />
@@ -66,34 +112,92 @@ export default function UpdateDialog({ updateInfo, onDismiss }: UpdateDialogProp
                   </div>
                 </div>
 
-                {/* Release notes */}
-                {updateInfo.releaseNotes && (
-                  <div className="mb-5 p-3.5 rounded-xl bg-secondary/50 text-sm text-muted-foreground leading-relaxed">
-                    {updateInfo.releaseNotes}
-                  </div>
-                )}
+                {fallbackPrompt ? (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col gap-4"
+                  >
+                    <p className="text-sm text-center text-muted-foreground px-2">
+                      Automatic installation failed. This usually happens if permission was denied. Would you like to download and install the update manually via your browser?
+                    </p>
+                    <div className="flex flex-col gap-2.5 mt-2">
+                      <button
+                        onClick={() => {
+                          window.open(updateInfo.apkUrl, '_blank');
+                          onDismiss();
+                        }}
+                        className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        Download Manually
+                      </button>
+                      <button
+                        onClick={onDismiss}
+                        className="w-full py-3 rounded-2xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <>
+                    {/* Release notes */}
+                    {updateInfo.releaseNotes && (
+                      <div className="mb-5 p-3.5 rounded-xl bg-secondary/50 text-sm text-muted-foreground leading-relaxed">
+                        {updateInfo.releaseNotes}
+                      </div>
+                    )}
 
-                {/* Actions */}
-                <div className="flex flex-col gap-2.5">
-                  <a
-                    id="update-download-btn"
-                    href={updateInfo.apkUrl}
-                    download
-                    onClick={onDismiss}
-                    className="group flex items-center justify-center gap-3 w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:bg-primary/90 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <Download size={18} />
-                    Download & Install
-                    <ArrowRight size={15} className="transition-transform duration-200 group-hover:translate-x-1" />
-                  </a>
-                  <button
-                    id="update-later-btn"
-                    onClick={onDismiss}
-                    className="w-full py-3 rounded-2xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200"
-                  >
-                    Remind me later
-                  </button>
-                </div>
+                    {/* Progress bar */}
+                    {downloading && (
+                      <div className="mb-5">
+                        <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                          <span>Downloading update...</span>
+                          <span>{Math.round(progress * 100)}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                          <motion.div 
+                            className="h-full bg-primary"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-2.5">
+                      <button
+                        id="update-download-btn"
+                        onClick={handleDownload}
+                        disabled={downloading}
+                        className="group flex items-center justify-center gap-3 w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:bg-primary/90 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:hover:scale-100"
+                      >
+                        {downloading ? (
+                          <>
+                            <Loader2 size={18} className="animate-spin" />
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <Download size={18} />
+                            Download & Install
+                            <ArrowRight size={15} className="transition-transform duration-200 group-hover:translate-x-1" />
+                          </>
+                        )}
+                      </button>
+                      {!downloading && (
+                        <button
+                          id="update-later-btn"
+                          onClick={onDismiss}
+                          className="w-full py-3 rounded-2xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-200"
+                        >
+                          Remind me later
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
 
               </div>
             </div>
