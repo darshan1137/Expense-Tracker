@@ -320,7 +320,7 @@ export default function Settings() {
             <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">App</h3>
             <Card className="bg-card">
               <CardContent className="p-4">
-                <a href="/ExpenseTracker.apk?v=1.1.6" download className="block">
+                <a href="/ExpenseTracker-v1.1.8.apk" download className="block">
                   <Button variant="secondary" className="w-full font-semibold bg-primary/10 text-primary hover:bg-primary/20 border-primary/20">
                     ⬇️ Download Android APK
                   </Button>

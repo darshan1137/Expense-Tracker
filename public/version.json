@@ -1,6 +1,6 @@
 {
-  "version": "1.1.7",
-  "apkUrl": "https://expense-manager-cg.vercel.app/ExpenseTracker.apk?v=1.1.7",
-  "releaseNotes": "Fix Service Worker caching local files in Android app.",
+  "version": "1.1.8",
+  "apkUrl": "https://expense-manager-cg.vercel.app/ExpenseTracker-v1.1.8.apk",
+  "releaseNotes": "Use strict filename versioning to bypass Vercel static asset cache.",
   "releaseDate": "2026-08-31"
 }
