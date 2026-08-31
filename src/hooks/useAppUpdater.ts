@@ -28,7 +28,7 @@ export interface UpdateInfo {
  * When the deployed version.json has a higher version than this constant,
  * the update dialog will appear automatically inside the app.
  */
-export const CURRENT_APP_VERSION = '1.1.6';
+export const CURRENT_APP_VERSION = '1.1.7';
 
 export function useAppUpdater() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);

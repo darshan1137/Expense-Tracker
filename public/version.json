@@ -1,6 +1,6 @@
 {
-  "version": "1.1.6",
-  "apkUrl": "https://expense-manager-cg.vercel.app/ExpenseTracker.apk?v=1.1.6",
-  "releaseNotes": "Fix infinite update loop caused by Vercel edge caching.",
+  "version": "1.1.7",
+  "apkUrl": "https://expense-manager-cg.vercel.app/ExpenseTracker.apk?v=1.1.7",
+  "releaseNotes": "Fix Service Worker caching local files in Android app.",
   "releaseDate": "2026-08-31"
 }
