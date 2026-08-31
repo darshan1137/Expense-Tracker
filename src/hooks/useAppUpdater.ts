@@ -37,7 +37,9 @@ export function useAppUpdater() {
     const check = async () => {
       try {
         // Bust the cache so we always get the latest version.json
-        const res = await fetch(`/version.json?t=${Date.now()}`);
+        // NOTE: Use the absolute live URL so Capacitor native apps fetch from the web, 
+        // rather than their bundled local assets.
+        const res = await fetch(`https://expense-manager-cg.vercel.app/version.json?t=${Date.now()}`);
         if (!res.ok) return;
         const data: UpdateInfo = await res.json();
         if (compareSemver(data.version, CURRENT_APP_VERSION) > 0) {
