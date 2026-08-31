@@ -136,9 +136,12 @@ export default function AddExpense() {
               {(['Needs', 'Wants', 'Investments'] as const).map(group => {
                 const groupCats = allCategories.filter(c => c.type === group);
                 if (groupCats.length === 0) return null;
+                const headerColor = group === 'Needs' ? 'text-emerald-600 dark:text-emerald-400' 
+                  : group === 'Wants' ? 'text-amber-600 dark:text-amber-400' 
+                  : 'text-blue-600 dark:text-blue-400';
                 return (
                   <>
-                    <SelectItem key={`__${group}`} value={`__${group}`} disabled className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    <SelectItem key={`__${group}`} value={`__${group}`} disabled className={`text-xs font-bold uppercase tracking-wider ${headerColor} opacity-100`}>
                       {group}
                     </SelectItem>
                     {groupCats.map(cat => (

@@ -37,3 +37,6 @@ dev-dist/
 
 # Artifacts
 .vercel
+
+# Pre-Push Checklist
+DEPLOYMENT_CHECKLIST.md

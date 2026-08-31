@@ -320,7 +320,7 @@ export default function Dashboard() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {DEFAULT_CATEGORIES.map(cat => (
-                        <SelectItem key={cat.name} value={cat.name}>{cat.name} ({cat.type})</SelectItem>
+                        <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>
                       ))}
                       {editForm.category && !DEFAULT_CATEGORIES.some(c => c.name === editForm.category) && (
                         <SelectItem value={editForm.category}>{editForm.category} (Custom)</SelectItem>
