@@ -1,6 +1,6 @@
 {
-  "version": "1.1.10",
-  "apkUrl": "https://expense-manager-cg.vercel.app/ExpenseTracker-v1.1.10.apk",
-  "releaseNotes": "Fix build script silently failing to sync web assets to Android container.",
+  "version": "1.1.11",
+  "apkUrl": "https://expense-manager-cg.vercel.app/ExpenseTracker-v1.1.11.apk",
+  "releaseNotes": "Testing over-the-air updates functionality.",
   "releaseDate": "2026-08-31"
 }
