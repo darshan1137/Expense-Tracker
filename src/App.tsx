@@ -65,14 +65,25 @@ function App() {
           <Route
             path="/"
             element={
-              user && localStorage.getItem('spreadsheetId')
-                ? <Navigate to="/dashboard" />
+              user
+                ? localStorage.getItem('spreadsheetId')
+                  ? <Navigate to="/dashboard" />
+                  : <Navigate to="/onboarding" />
                 : Capacitor.isNativePlatform()
                   ? <Navigate to="/login" />
                   : <LandingPage />
             }
           />
-          <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
+          <Route 
+            path="/login" 
+            element={
+              !user 
+                ? <Login /> 
+                : localStorage.getItem('spreadsheetId') 
+                  ? <Navigate to="/dashboard" /> 
+                  : <Navigate to="/onboarding" />
+            } 
+          />
           <Route path="/onboarding" element={user ? <Onboarding /> : <Navigate to="/login" />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
