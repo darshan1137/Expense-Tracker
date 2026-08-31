@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { SEO } from '../components/SEO';
 import { signInWithGoogle } from '../services/googleAuth';
 import {
   BarChart3,
@@ -60,6 +61,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <SEO title="Home" />
       {/* ─── Ambient blobs ─────────────────────────────────────────── */}
       <div
         aria-hidden

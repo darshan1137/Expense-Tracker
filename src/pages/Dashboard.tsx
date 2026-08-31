@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { SEO } from '../components/SEO';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -92,6 +93,7 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <SEO title="Dashboard" />
       
       <div className="text-center space-y-2 mt-4">
         <h2 className="text-xs font-medium text-muted-foreground">

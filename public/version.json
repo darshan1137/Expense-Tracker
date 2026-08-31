@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.1",
   "apkUrl": "/ExpenseTracker.apk",
-  "releaseNotes": "Performance optimizations, advanced Analysis charts, and new Categories UI.",
-  "releaseDate": "2026-08-30"
+  "releaseNotes": "Edit Category Bug Fix.",
+  "releaseDate": "2026-08-31"
 }

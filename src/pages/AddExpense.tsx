@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SEO } from '../components/SEO';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -85,6 +86,7 @@ export default function AddExpense() {
 
   return (
     <div className="p-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <SEO title="Add Expense" />
       <h2 className="text-2xl font-bold mb-6">Add Expense</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6 bg-card p-6 rounded-xl shadow-sm border">

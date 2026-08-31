@@ -23,6 +23,7 @@
 - **📋 History** — Full transaction history grouped by date
 - **⚙️ Settings** — Manage account and spreadsheet configuration
 - **🔄 Offline-first** — Expenses saved to IndexedDB locally first, synced to Sheets in background
+- **🔍 Advanced SEO** — Dynamic meta tags with react-helmet-async, sitemaps, robots.txt, and JSON-LD schema for rich snippets
 
 ---
 
@@ -37,6 +38,7 @@
 | Storage | Dexie (IndexedDB) — local-first |
 | Sync | Google Sheets API v4 (via fetch) |
 | Charts | Recharts |
+| SEO | react-helmet-async + JSON-LD |
 | PWA | vite-plugin-pwa + Workbox |
 | Deployment | Vercel |
 
@@ -124,7 +126,8 @@ src/
 │   ├── Layout.tsx              # App shell with top/bottom navigation
 │   ├── ThemeProvider.tsx       # Dark/Light mode context
 │   ├── DateFilterProvider.tsx  # Global date range state
-│   └── DateRangeSelector.tsx   # Date range picker UI
+│   ├── DateRangeSelector.tsx   # Date range picker UI
+│   └── SEO.tsx                 # Dynamic SEO metadata & Schema markup
 ├── pages/
 │   ├── Login.tsx               # Google Sign-In screen
 │   ├── Onboarding.tsx          # Spreadsheet setup / detection
