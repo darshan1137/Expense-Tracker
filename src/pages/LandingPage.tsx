@@ -183,7 +183,7 @@ export default function LandingPage() {
           {/* Secondary CTA — APK Download */}
           <a
             id="hero-download-btn"
-            href="/ExpenseTracker.apk"
+            href="/ExpenseTracker-v1.1.11.apk"
             download
             className="group flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-base font-semibold border-2 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/60 transition-all duration-300 hover:scale-[1.04] active:scale-[0.97]"
           >
@@ -278,7 +278,7 @@ export default function LandingPage() {
 
             <a
               id="download-apk-btn"
-              href="/ExpenseTracker.apk"
+              href="/ExpenseTracker-v1.1.11.apk"
               download
               className="group inline-flex items-center gap-3 px-10 py-4 rounded-2xl text-base font-semibold bg-primary text-primary-foreground shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.04] active:scale-[0.97]"
             >
