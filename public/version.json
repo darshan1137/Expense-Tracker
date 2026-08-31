@@ -1,6 +1,6 @@
 {
-  "version": "1.1.5",
-  "apkUrl": "https://expense-manager-cg.vercel.app/ExpenseTracker.apk",
-  "releaseNotes": "Fix cache issue during APK installation.",
+  "version": "1.1.6",
+  "apkUrl": "https://expense-manager-cg.vercel.app/ExpenseTracker.apk?v=1.1.6",
+  "releaseNotes": "Fix infinite update loop caused by Vercel edge caching.",
   "releaseDate": "2026-08-31"
 }
