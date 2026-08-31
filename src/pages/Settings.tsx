@@ -11,6 +11,7 @@ import { useCategories } from '../hooks/useCategories';
 import { useState } from 'react';
 import { Trash2, RotateCcw, Plus, Tag, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CURRENT_APP_VERSION } from '../hooks/useAppUpdater';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -352,10 +353,15 @@ export default function Settings() {
           </Card>
         </div>
 
-        <div className="pt-8">
+        <div className="pt-8 pb-4">
           <Button variant="destructive" className="w-full" onClick={handleLogout}>
             Logout
           </Button>
+          <div className="mt-6 text-center">
+            <p className="text-xs font-medium text-muted-foreground/60">
+              App Version {CURRENT_APP_VERSION}
+            </p>
+          </div>
         </div>
 
       </div>
