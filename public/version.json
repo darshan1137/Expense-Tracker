@@ -1,6 +1,6 @@
 {
-  "version": "1.1.4",
+  "version": "1.1.5",
   "apkUrl": "https://expense-manager-cg.vercel.app/ExpenseTracker.apk",
-  "releaseNotes": "Added app version display in Settings.",
+  "releaseNotes": "Fix cache issue during APK installation.",
   "releaseDate": "2026-08-31"
 }

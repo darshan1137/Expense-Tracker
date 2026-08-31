@@ -37,8 +37,10 @@ export default function UpdateDialog({ updateInfo, onDismiss }: UpdateDialogProp
         }
       });
 
+      const cacheBustedUrl = `${updateInfo.apkUrl}?t=${Date.now()}`;
+
       const result = await Filesystem.downloadFile({
-        url: updateInfo.apkUrl,
+        url: cacheBustedUrl,
         path: 'ExpenseTracker-update.apk',
         directory: Directory.Cache,
         progress: true
@@ -124,7 +126,8 @@ export default function UpdateDialog({ updateInfo, onDismiss }: UpdateDialogProp
                     <div className="flex flex-col gap-2.5 mt-2">
                       <button
                         onClick={() => {
-                          window.open(updateInfo.apkUrl, '_blank');
+                          const cacheBustedUrl = `${updateInfo.apkUrl}?t=${Date.now()}`;
+                          window.open(cacheBustedUrl, '_blank');
                           onDismiss();
                         }}
                         className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
