@@ -27,6 +27,7 @@ export interface UpdateInfo {
  * CURRENT_APP_VERSION — bump this every time you build a new APK.
  * When the deployed version.json has a higher version than this constant,
  * the update dialog will appear automatically inside the app.
+ */
 export const CURRENT_APP_VERSION = '1.1.6';
 
 export function useAppUpdater() {
